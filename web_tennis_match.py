@@ -2,14 +2,14 @@ import streamlit as st
 import random
 import pandas as pd
 from io import BytesIO
-from itertools import combinations
 from collections import defaultdict
+from itertools import combinations
 
 st.set_page_config(page_title="🎾 테니스 대진표 앱", layout="centered")
-st.title("🎾 테니스 대진표 프로그램")
+st.title("🎾 테니스 대진표 프로그램 (단식/복식 지원)")
 
 # 세션 상태 초기화
-for key in ["players", "matches", "scores", "past_matches"]:
+for key in ["players", "matches", "scores"]:
     if key not in st.session_state:
         st.session_state[key] = []
 
@@ -22,68 +22,98 @@ if names_input:
     st.session_state.players = [name.strip() for name in names_input.split(",") if name.strip()]
     st.success("현재 참가자: " + ", ".join(st.session_state.players))
 
-# ✅ 2. 경기 수 설정 및 대진표 생성
-st.subheader("2. 1인당 경기 수 지정 및 대진표 생성")
+# ✅ 2. 경기 유형 선택 및 대진표 생성
+st.subheader("2. 경기 유형 및 대진표 생성")
 
+match_type = st.radio("경기 유형을 선택하세요", ["단식", "복식"], horizontal=True)
 game_per_player = st.number_input("각 참가자가 몇 경기씩 하게 할까요?", min_value=1, step=1)
 
-if len(st.session_state.players) >= 2:
-    if st.button("대진표 생성 (1인당 N경기)"):
+if len(st.session_state.players) >= (2 if match_type == "단식" else 4):
+    if st.button("대진표 생성"):
         players = st.session_state.players[:]
-        all_matches = list(combinations(players, 2))
-        random.shuffle(all_matches)
-
         match_counts = defaultdict(int)
-        selected_matches = []
+        matches = []
 
-        for match in all_matches:
-            p1, p2 = match
-            if match_counts[p1] < game_per_player and match_counts[p2] < game_per_player:
-                selected_matches.append(match)
-                match_counts[p1] += 1
-                match_counts[p2] += 1
+        if match_type == "단식":
+            while any(match_counts[p] < game_per_player for p in players):
+                p1, p2 = random.sample(players, 2)
+                if match_counts[p1] < game_per_player and match_counts[p2] < game_per_player:
+                    matches.append((p1, p2))
+                    match_counts[p1] += 1
+                    match_counts[p2] += 1
+        else:  # 복식
+            while any(match_counts[p] < game_per_player for p in players):
+                team = random.sample(players, 4)
+                team1 = tuple(sorted(team[:2]))
+                team2 = tuple(sorted(team[2:]))
+                if all(match_counts[p] < game_per_player for p in team):
+                    matches.append((team1, team2))
+                    for p in team:
+                        match_counts[p] += 1
 
-        if all(count >= game_per_player for count in match_counts.values()):
-            st.session_state.matches = selected_matches
-            st.session_state.past_matches = selected_matches[:]
-            st.session_state.scores = {}
-            st.success("✅ 대진표가 생성되었습니다!")
-        else:
-            st.warning("⚠️ 현재 인원으로는 1인당 지정된 경기 수를 만족하는 대진표를 만들 수 없습니다.")
+        st.session_state.matches = matches
+        st.session_state.scores = {}
+        st.session_state.match_type = match_type
+        st.success("✅ 대진표가 생성되었습니다!")
 else:
-    st.info("최소 2명 이상의 참가자가 필요합니다.")
+    st.info("단식은 최소 2명, 복식은 최소 4명 이상 필요합니다.")
 
-# ✅ 3. 점수 입력 및 수정 (라운드 포함, 컬럼 방식 시각화)
+# ✅ 3. 점수 입력 및 수정 (단식/복식 모두 대응, 컬럼 시각화)
 if st.session_state.matches:
     st.subheader("3. 스코어 입력 및 수정")
     edited_scores = {}
     cols = st.columns(2)
 
-    for idx, (p1, p2) in enumerate(st.session_state.matches):
+    for idx, match in enumerate(st.session_state.matches):
         key = f"score_{idx}"
         default_score = st.session_state.get(key, "")
-        round_label = f"Round {idx + 1}: {p1} vs {p2}"
+
+        if st.session_state.match_type == "단식":
+            p1, p2 = match
+            label = f"Round {idx + 1}: {p1} vs {p2}"
+        else:
+            (p1a, p1b), (p2a, p2b) = match
+            label = f"Round {idx + 1}: {p1a}+{p1b} vs {p2a}+{p2b}"
+
         with cols[idx % 2]:
-            score_input = st.text_input(round_label, value=default_score, key=key)
-        edited_scores[(p1, p2)] = score_input
+            score_input = st.text_input(label, value=default_score, key=key)
+        edited_scores[(match, idx)] = score_input
 
     if st.button("🧮 점수 반영"):
         st.session_state.scores.clear()
-        for (p1, p2), score in edited_scores.items():
+        for (match, idx), score in edited_scores.items():
             try:
                 s1, s2 = map(int, score.strip().split(":"))
-                st.session_state[f"score_{st.session_state.matches.index((p1, p2))}"] = score
-                st.session_state.scores.setdefault(p1, 0)
-                st.session_state.scores.setdefault(p2, 0)
-                if s1 > s2:
-                    st.session_state.scores[p1] += 3
-                elif s1 < s2:
-                    st.session_state.scores[p2] += 3
+                st.session_state[f"score_{idx}"] = score
+
+                if st.session_state.match_type == "단식":
+                    p1, p2 = match
+                    st.session_state.scores.setdefault(p1, 0)
+                    st.session_state.scores.setdefault(p2, 0)
+                    if s1 > s2:
+                        st.session_state.scores[p1] += 3
+                    elif s1 < s2:
+                        st.session_state.scores[p2] += 3
+                    else:
+                        st.session_state.scores[p1] += 1
+                        st.session_state.scores[p2] += 1
+
                 else:
-                    st.session_state.scores[p1] += 1
-                    st.session_state.scores[p2] += 1
+                    team1, team2 = match
+                    for p in team1 + team2:
+                        st.session_state.scores.setdefault(p, 0)
+                    if s1 > s2:
+                        for p in team1:
+                            st.session_state.scores[p] += 3
+                    elif s1 < s2:
+                        for p in team2:
+                            st.session_state.scores[p] += 3
+                    else:
+                        for p in team1 + team2:
+                            st.session_state.scores[p] += 1
+
             except:
-                st.warning(f"⚠️ {p1} vs {p2} 점수 입력 오류 (예: 2:1)")
+                st.warning(f"⚠️ 점수 입력 오류 (예: 2:1)")
 
     if st.button("🔄 점수 전체 초기화"):
         for idx in range(len(st.session_state.matches)):
@@ -99,9 +129,16 @@ if st.session_state.scores:
     score_df.index += 1
     st.dataframe(score_df)
 
-    # 대진표 정보에 라운드 포함
-    match_data = [(f"Round {i+1}", p1, p2) for i, (p1, p2) in enumerate(st.session_state.matches)]
-    match_df = pd.DataFrame(match_data, columns=["라운드", "플레이어1", "플레이어2"])
+    match_data = []
+    for i, match in enumerate(st.session_state.matches):
+        if st.session_state.match_type == "단식":
+            p1, p2 = match
+            match_data.append((f"Round {i+1}", p1, p2))
+        else:
+            team1, team2 = match
+            match_data.append((f"Round {i+1}", "+".join(team1), "+".join(team2)))
+
+    match_df = pd.DataFrame(match_data, columns=["라운드", "팀1", "팀2"])
 
     output = BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
