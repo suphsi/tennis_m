@@ -7,7 +7,7 @@ from itertools import combinations
 import time
 
 st.set_page_config(page_title="🎾 테니스 대진표 앱", layout="centered")
-st.title("🎾 테니스 대진표 프로그램 (속도 개선 버전)")
+st.title("🎾 테니스 대진표 프로그램 (조합 기반 속도 개선)")
 
 # 세션 상태 초기화
 for key in ["players", "matches", "scores"]:
@@ -35,33 +35,31 @@ if len(st.session_state.players) >= (2 if match_type == "단식" else 4):
         players = st.session_state.players[:]
         match_counts = defaultdict(int)
         matches = []
-        attempts = 0
-        max_attempts = 10000
 
         if match_type == "단식":
-            while any(match_counts[p] < game_per_player for p in players) and attempts < max_attempts:
-                p1, p2 = random.sample(players, 2)
+            all_combos = list(combinations(players, 2))
+            random.shuffle(all_combos)
+            for p1, p2 in all_combos:
                 if match_counts[p1] < game_per_player and match_counts[p2] < game_per_player:
                     matches.append((p1, p2))
                     match_counts[p1] += 1
                     match_counts[p2] += 1
-                attempts += 1
-        else:  # 복식
-            while any(match_counts[p] < game_per_player for p in players) and attempts < max_attempts:
-                team = random.sample(players, 4)
-                team1 = tuple(sorted(team[:2]))
-                team2 = tuple(sorted(team[2:]))
-                if all(match_counts[p] < game_per_player for p in team):
+        else:
+            all_combos = list(combinations(players, 4))
+            random.shuffle(all_combos)
+            for combo in all_combos:
+                team1 = tuple(sorted(combo[:2]))
+                team2 = tuple(sorted(combo[2:]))
+                if all(match_counts[p] < game_per_player for p in combo):
                     matches.append((team1, team2))
-                    for p in team:
+                    for p in combo:
                         match_counts[p] += 1
-                attempts += 1
 
         elapsed_time = time.time() - start_time
         st.write(f"⏱ 대진표 생성에 {elapsed_time:.2f}초 걸렸습니다.")
 
-        if any(match_counts[p] < game_per_player for p in players):
-            st.warning("⚠️ 일부 참가자의 경기 수가 목표치에 도달하지 못했습니다.")
+        if not matches:
+            st.warning("⚠️ 조건에 맞는 대진표를 생성할 수 없습니다.")
 
         st.session_state.matches = matches
         st.session_state.scores = {}
