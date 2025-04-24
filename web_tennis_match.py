@@ -16,7 +16,7 @@ for key in ["players", "matches", "scores", "past_matches"]:
 # ✅ 1. 참가자 입력
 st.subheader("1. 참가자 등록")
 
-names_input = st.text_area("참가자 이름들을 쉼표(,)로 구분하여 입력하세요:", placeholder="예: Blake, Eunsu, Sara, Jin")
+names_input = st.text_area("참가자 이름들을 쉼표(,)로 구분하여 입력하세요:", placeholder="예: 김길동, 이길동, 박길동, 최길동")
 
 if names_input:
     st.session_state.players = [name.strip() for name in names_input.split(",") if name.strip()]
