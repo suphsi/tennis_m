@@ -16,7 +16,7 @@ for key in ["players", "matches", "scores", "past_matches"]:
 # ✅ 1. 참가자 입력
 st.subheader("1. 참가자 등록")
 
-names_input = st.text_area("참가자 이름들을 쉼표(,)로 구분하여 입력하세요:", placeholder="예: 홍길동, 홍길동, 홍길동, 홍길동")
+names_input = st.text_area("참가자 이름들을 쉼표(,)로 구분하여 입력하세요:", placeholder="예: Blake, Eunsu, Sara, Jin")
 
 if names_input:
     st.session_state.players = [name.strip() for name in names_input.split(",") if name.strip()]
@@ -53,7 +53,7 @@ if len(st.session_state.players) >= 2:
 else:
     st.info("최소 2명 이상의 참가자가 필요합니다.")
 
-# ✅ 3. 점수 입력 및 수정
+# ✅ 3. 점수 입력 및 수정 (라운드 포함)
 if st.session_state.matches:
     st.subheader("3. 스코어 입력 및 수정")
     edited_scores = {}
@@ -61,7 +61,8 @@ if st.session_state.matches:
     for idx, (p1, p2) in enumerate(st.session_state.matches):
         key = f"score_{idx}"
         default_score = st.session_state.get(key, "")
-        score_input = st.text_input(f"{p1} vs {p2} (예: 2:1)", value=default_score, key=key)
+        round_label = f"Round {idx + 1}: {p1} vs {p2}"
+        score_input = st.text_input(round_label, value=default_score, key=key)
         edited_scores[(p1, p2)] = score_input
 
     if st.button("🧮 점수 반영"):
@@ -88,7 +89,7 @@ if st.session_state.matches:
         st.session_state.scores.clear()
         st.success("모든 점수가 초기화되었습니다!")
 
-# ✅ 4. 승점표 출력 및 엑셀 다운로드
+# ✅ 4. 승점표 출력 및 엑셀 다운로드 (라운드 포함)
 if st.session_state.scores:
     st.subheader("4. 승점표 (랭킹순)")
     sorted_scores = sorted(st.session_state.scores.items(), key=lambda x: x[1], reverse=True)
@@ -96,9 +97,14 @@ if st.session_state.scores:
     score_df.index += 1
     st.dataframe(score_df)
 
+    # 대진표 정보에 라운드 포함
+    match_data = [(f"Round {i+1}", p1, p2) for i, (p1, p2) in enumerate(st.session_state.matches)]
+    match_df = pd.DataFrame(match_data, columns=["라운드", "플레이어1", "플레이어2"])
+
     output = BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
         score_df.to_excel(writer, index_label="순위", sheet_name="승점표")
+        match_df.to_excel(writer, index=False, sheet_name="대진표")
     output.seek(0)
 
     st.download_button(
