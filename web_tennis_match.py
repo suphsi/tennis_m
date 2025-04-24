@@ -16,7 +16,7 @@ for key in ["players", "matches", "scores", "past_matches"]:
 # ✅ 1. 참가자 입력
 st.subheader("1. 참가자 등록")
 
-names_input = st.text_area("참가자 이름들을 쉼표(,)로 구분하여 입력하세요:", placeholder="예: 김길동, 이길동, 박길동, 최길동")
+names_input = st.text_area("참가자 이름들을 쉼표(,)로 구분하여 입력하세요:", placeholder="예: Blake, Eunsu, Sara, Jin")
 
 if names_input:
     st.session_state.players = [name.strip() for name in names_input.split(",") if name.strip()]
@@ -53,16 +53,18 @@ if len(st.session_state.players) >= 2:
 else:
     st.info("최소 2명 이상의 참가자가 필요합니다.")
 
-# ✅ 3. 점수 입력 및 수정 (라운드 포함)
+# ✅ 3. 점수 입력 및 수정 (라운드 포함, 컬럼 방식 시각화)
 if st.session_state.matches:
     st.subheader("3. 스코어 입력 및 수정")
     edited_scores = {}
+    cols = st.columns(2)
 
     for idx, (p1, p2) in enumerate(st.session_state.matches):
         key = f"score_{idx}"
         default_score = st.session_state.get(key, "")
         round_label = f"Round {idx + 1}: {p1} vs {p2}"
-        score_input = st.text_input(round_label, value=default_score, key=key)
+        with cols[idx % 2]:
+            score_input = st.text_input(round_label, value=default_score, key=key)
         edited_scores[(p1, p2)] = score_input
 
     if st.button("🧮 점수 반영"):
