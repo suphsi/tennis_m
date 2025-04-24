@@ -1,6 +1,7 @@
 import streamlit as st
 import random
 import pandas as pd
+from io import BytesIO
 
 st.set_page_config(page_title="🎾 테니스 대진표 앱", layout="centered")
 st.title("🎾 테니스 대진표 프로그램")
@@ -38,7 +39,7 @@ if len(st.session_state.players) >= 2 and len(st.session_state.players) % 2 == 0
             valid = True
             trial_matches = []
             for i in range(0, len(players), 2):
-                pair = tuple(sorted((players[i], players[i+1])))
+                pair = tuple(sorted((players[i], players[i + 1])))
                 if pair in st.session_state.past_matches:
                     valid = False
                     break
@@ -89,9 +90,14 @@ if st.session_state.scores:
     st.dataframe(score_df)
 
     # ✅ 엑셀 다운로드
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        score_df.to_excel(writer, index_label="순위", sheet_name="승점표")
+    output.seek(0)
+
     st.download_button(
         label="📥 엑셀로 저장하기",
-        data=score_df.to_excel(index_label="순위", engine="openpyxl"),
+        data=output,
         file_name="tennis_scores.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
