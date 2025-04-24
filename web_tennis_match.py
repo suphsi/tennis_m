@@ -60,28 +60,36 @@ if len(st.session_state.players) >= 2 and len(st.session_state.players) % 2 == 0
 else:
     st.info("짝수의 참가자를 입력해주세요.")
 
-# ✅ 3. 대진표와 점수 입력
+# ✅ 3. 대진표와 점수 입력 (중복 점수 방지 포함)
 if st.session_state.matches:
     st.subheader("3. 스코어 입력 및 승점 계산")
 
     for idx, (p1, p2) in enumerate(st.session_state.matches):
-        score = st.text_input(f"{p1} vs {p2} (예: 3:1)", key=f"score_{idx}")
-        if score:
-            try:
-                s1, s2 = map(int, score.strip().split(":"))
-                st.session_state.scores.setdefault(p1, 0)
-                st.session_state.scores.setdefault(p2, 0)
-                if s1 > s2:
-                    st.session_state.scores[p1] += 3
-                elif s1 < s2:
-                    st.session_state.scores[p2] += 3
-                else:
-                    st.session_state.scores[p1] += 1
-                    st.session_state.scores[p2] += 1
-            except:
-                st.warning("❗ 점수 형식이 잘못되었습니다. 예: 3:1")
+        key_score = f"score_{idx}"
+        key_done = f"score_done_{idx}"
 
-# ✅ 4. 승점표 출력
+        if key_done not in st.session_state:
+            score = st.text_input(f"{p1} vs {p2} (예: 3:1)", key=key_score)
+            if score:
+                try:
+                    s1, s2 = map(int, score.strip().split(":"))
+                    st.session_state.scores.setdefault(p1, 0)
+                    st.session_state.scores.setdefault(p2, 0)
+                    if s1 > s2:
+                        st.session_state.scores[p1] += 3
+                    elif s1 < s2:
+                        st.session_state.scores[p2] += 3
+                    else:
+                        st.session_state.scores[p1] += 1
+                        st.session_state.scores[p2] += 1
+                    st.session_state[key_done] = True
+                    st.success(f"{p1} vs {p2} 점수 반영 완료!")
+                except:
+                    st.warning("❗ 점수 형식이 잘못되었습니다. 예: 3:1")
+        else:
+            st.info(f"{p1} vs {p2} - 점수 입력 완료")
+
+# ✅ 4. 승점표 출력 및 엑셀 다운로드
 if st.session_state.scores:
     st.subheader("4. 승점표 (랭킹순)")
     sorted_scores = sorted(st.session_state.scores.items(), key=lambda x: x[1], reverse=True)
