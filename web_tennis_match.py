@@ -17,7 +17,7 @@ for key in ["players", "matches", "scores"]:
 # ✅ 1. 참가자 입력
 st.subheader("1. 참가자 등록")
 
-names_input = st.text_area("참가자 이름들을 쉼표(,)로 구분하여 입력하세요:", placeholder="예: 홍길동, 김길동, 이길동, 박길동")
+names_input = st.text_area("참가자 이름들을 쉼표(,)로 구분하여 입력하세요:", placeholder="예: 패더러, 나달, 조코비치, 머레이")
 
 if names_input:
     st.session_state.players = [name.strip() for name in names_input.split(",") if name.strip()]
@@ -87,7 +87,7 @@ if st.session_state.matches:
                 team1, team2 = match
                 st.markdown(f"- 코트 {court_idx + 1}: {'+'.join(team1)} vs {'+'.join(team2)}")
 
-# ✅ 4. 점수 입력 및 수정 (복식 오류 최종 수정 포함)
+# ✅ 4. 점수 입력 및 수정 (match 구조 자동 판별 포함)
 if st.session_state.matches:
     st.subheader("4. 스코어 입력 및 수정")
     edited_scores = {}
@@ -101,7 +101,11 @@ if st.session_state.matches:
             p1, p2 = match
             label = f"Round {idx + 1}: {p1} vs {p2}"
         else:
-            team1, team2 = match
+            if isinstance(match[0], (tuple, list)):
+                team1, team2 = match
+            else:
+                team1 = match[0].split("+")
+                team2 = match[1].split("+")
             label = f"Round {idx + 1}: {'+'.join(team1)} vs {'+'.join(team2)}"
 
         with cols[idx % 2]:
@@ -131,7 +135,12 @@ if st.session_state.matches:
                         st.session_state.scores[p1] += 1
                         st.session_state.scores[p2] += 1
                 else:
-                    team1, team2 = match
+                    if isinstance(match[0], (tuple, list)):
+                        team1, team2 = match
+                    else:
+                        team1 = match[0].split("+")
+                        team2 = match[1].split("+")
+
                     for p in team1 + team2:
                         st.session_state.scores.setdefault(p, 0)
                     if s1 > s2:
@@ -167,7 +176,11 @@ if st.session_state.scores:
             p1, p2 = match
             match_data.append((f"Round {i+1}", p1, p2))
         else:
-            team1, team2 = match
+            if isinstance(match[0], (tuple, list)):
+                team1, team2 = match
+            else:
+                team1 = match[0].split("+")
+                team2 = match[1].split("+")
             match_data.append((f"Round {i+1}", "+".join(team1), "+".join(team2)))
 
     match_df = pd.DataFrame(match_data, columns=["라운드", "팀1", "팀2"])
