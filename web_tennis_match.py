@@ -6,7 +6,7 @@ from itertools import combinations
 import time
 
 st.set_page_config(page_title="🎾 테니스 대진표 앱", layout="centered")
-st.title("🎾 테니스 병렬 대진표 프로그램")
+st.title("🎾 테니스 대진표 프로그램")
 
 # 초기화
 for key in ["players", "matches", "scores", "final_scores"]:
