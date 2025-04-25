@@ -67,7 +67,7 @@ if st.session_state.matches:
     for round_idx, round_matches in enumerate(schedule):
         st.markdown(f"### 🕐 Round {round_idx + 1}")
         for court_idx, match in enumerate(round_matches):
-            cols = st.columns([3, 1, 1, 1, 1, 5])
+            cols = st.columns([3, 1, 1, 1, 3])
 
             if match_type == "단식":
                 team1, team2 = match
