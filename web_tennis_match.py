@@ -7,7 +7,7 @@ from itertools import combinations
 import time
 
 st.set_page_config(page_title="🎾 테니스 대진표 앱", layout="centered")
-st.title("🎾 테니스 대진표 프로그램 (조합 기반 속도 개선)")
+st.title("🎾 테니스 대진표 프로그램 (코트 배정 포함)")
 
 # 세션 상태 초기화
 for key in ["players", "matches", "scores"]:
@@ -23,11 +23,12 @@ if names_input:
     st.session_state.players = [name.strip() for name in names_input.split(",") if name.strip()]
     st.success("현재 참가자: " + ", ".join(st.session_state.players))
 
-# ✅ 2. 경기 유형 선택 및 대진표 생성
+# ✅ 2. 경기 유형 및 대진표 생성
 st.subheader("2. 경기 유형 및 대진표 생성")
 
 match_type = st.radio("경기 유형을 선택하세요", ["단식", "복식"], horizontal=True)
 game_per_player = st.number_input("각 참가자가 몇 경기씩 하게 할까요?", min_value=1, step=1)
+num_courts = st.number_input("사용할 코트 수", min_value=1, step=1)
 
 if len(st.session_state.players) >= (2 if match_type == "단식" else 4):
     if st.button("대진표 생성"):
@@ -64,13 +65,31 @@ if len(st.session_state.players) >= (2 if match_type == "단식" else 4):
         st.session_state.matches = matches
         st.session_state.scores = {}
         st.session_state.match_type = match_type
+        st.session_state.num_courts = num_courts
         st.success("✅ 대진표가 생성되었습니다!")
 else:
     st.info("단식은 최소 2명, 복식은 최소 4명 이상 필요합니다.")
 
-# ✅ 3. 점수 입력 및 수정
+# ✅ 3. 경기 일정표 (코트 배정)
 if st.session_state.matches:
-    st.subheader("3. 스코어 입력 및 수정")
+    st.subheader("3. 코트별 경기 일정표")
+    num_courts = st.session_state.num_courts
+    matches = st.session_state.matches
+    schedule = [matches[i:i+num_courts] for i in range(0, len(matches), num_courts)]
+
+    for round_idx, round_matches in enumerate(schedule):
+        st.markdown(f"### Round {round_idx + 1}")
+        for court_idx, match in enumerate(round_matches):
+            if st.session_state.match_type == "단식":
+                p1, p2 = match
+                st.markdown(f"- 코트 {court_idx + 1}: {p1} vs {p2}")
+            else:
+                team1, team2 = match
+                st.markdown(f"- 코트 {court_idx + 1}: {'+'.join(team1)} vs {'+'.join(team2)}")
+
+# ✅ 4. 점수 입력 및 수정
+if st.session_state.matches:
+    st.subheader("4. 스코어 입력 및 수정")
     edited_scores = {}
     cols = st.columns(2)
 
@@ -131,9 +150,9 @@ if st.session_state.matches:
         st.session_state.scores.clear()
         st.success("모든 점수가 초기화되었습니다!")
 
-# ✅ 4. 승점표 출력 및 엑셀 다운로드
+# ✅ 5. 승점표 출력 및 엑셀 다운로드
 if st.session_state.scores:
-    st.subheader("4. 승점표 (랭킹순)")
+    st.subheader("5. 승점표 (랭킹순)")
     sorted_scores = sorted(st.session_state.scores.items(), key=lambda x: x[1], reverse=True)
     score_df = pd.DataFrame(sorted_scores, columns=["이름", "승점"])
     score_df.index += 1
