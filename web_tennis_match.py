@@ -12,7 +12,7 @@ st.title("🎾 테니스 대진표 프로그램")
 # 세션 상태 초기화
 for key in ["players", "matches", "scores"]:
     if key not in st.session_state:
-        st.session_state[key] = []
+        st.session_state[key] = [] if key != "scores" else {}
 
 # ✅ 1. 참가자 입력
 st.subheader("1. 참가자 등록")
@@ -89,15 +89,13 @@ if st.session_state.matches:
                 team2_str = "+".join(team2)
                 st.markdown(f"- 코트 {court_idx + 1}: {team1_str} vs {team2_str}")
 
-# ✅ 4. 점수 입력 및 수정 (내부 구조는 tuple 유지)
+# ✅ 4. 점수 입력 및 수정 (인덱스 기반 처리)
 if st.session_state.matches:
     st.subheader("4. 스코어 입력 및 수정")
-    edited_scores = {}
     cols = st.columns(2)
 
     for idx, match in enumerate(st.session_state.matches):
-        key = f"score_{idx}"
-        default_score = st.session_state.get(key, "")
+        default_score = st.session_state.scores.get(idx, "")
 
         if st.session_state.match_type == "단식":
             p1, p2 = match
@@ -109,58 +107,57 @@ if st.session_state.matches:
             label = f"Round {idx + 1}: {team1_str} vs {team2_str}"
 
         with cols[idx % 2]:
-            score_input = st.text_input(label, value=default_score, key=key)
-        edited_scores[(match, idx)] = score_input
+            st.session_state.scores[idx] = st.text_input(label, value=default_score, key=f"score_{idx}")
 
     if st.button("🧮 점수 반영"):
-        st.session_state.scores.clear()
-        for (match, idx), score in edited_scores.items():
+        scores = {}
+        score_dict = st.session_state.scores.copy()
+        players_score = defaultdict(int)
+
+        for idx, score in score_dict.items():
+            match = st.session_state.matches[idx]
             try:
                 if not score or ':' not in score:
                     raise ValueError("형식 오류")
                 s1_str, s2_str = score.split(":")
                 s1 = int(s1_str.strip())
                 s2 = int(s2_str.strip())
-                st.session_state[f"score_{idx}"] = score
 
                 if st.session_state.match_type == "단식":
                     p1, p2 = match
-                    st.session_state.scores.setdefault(p1, 0)
-                    st.session_state.scores.setdefault(p2, 0)
                     if s1 > s2:
-                        st.session_state.scores[p1] += 3
+                        players_score[p1] += 3
                     elif s1 < s2:
-                        st.session_state.scores[p2] += 3
+                        players_score[p2] += 3
                     else:
-                        st.session_state.scores[p1] += 1
-                        st.session_state.scores[p2] += 1
+                        players_score[p1] += 1
+                        players_score[p2] += 1
                 else:
                     team1, team2 = match
-                    for p in team1 + team2:
-                        st.session_state.scores.setdefault(p, 0)
                     if s1 > s2:
                         for p in team1:
-                            st.session_state.scores[p] += 3
+                            players_score[p] += 3
                     elif s1 < s2:
                         for p in team2:
-                            st.session_state.scores[p] += 3
+                            players_score[p] += 3
                     else:
                         for p in team1 + team2:
-                            st.session_state.scores[p] += 1
-
-            except Exception:
+                            players_score[p] += 1
+            except:
                 st.warning("⚠️ 점수 입력 오류 (예: 2:1)")
 
+        st.session_state.final_scores = players_score
+        st.success("점수가 반영되었습니다!")
+
     if st.button("🔄 점수 전체 초기화"):
-        for idx in range(len(st.session_state.matches)):
-            st.session_state[f"score_{idx}"] = ""
-        st.session_state.scores.clear()
+        st.session_state.scores = {}
+        st.session_state.final_scores = {}
         st.success("모든 점수가 초기화되었습니다!")
 
 # ✅ 5. 승점표 출력 및 엑셀 다운로드
-if st.session_state.scores:
+if "final_scores" in st.session_state and st.session_state.final_scores:
     st.subheader("5. 승점표 (랭킹순)")
-    sorted_scores = sorted(st.session_state.scores.items(), key=lambda x: x[1], reverse=True)
+    sorted_scores = sorted(st.session_state.final_scores.items(), key=lambda x: x[1], reverse=True)
     score_df = pd.DataFrame(sorted_scores, columns=["이름", "승점"])
     score_df.index += 1
     st.dataframe(score_df)
