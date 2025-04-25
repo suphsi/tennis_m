@@ -6,7 +6,7 @@ from itertools import combinations
 import time
 
 st.set_page_config(page_title="🎾 테니스 대진표 앱", layout="centered")
-st.title("🎾 테니스 병렬 대진표 프로그램")
+st.title("🎾 테니스 병렬 대진표 프로그램 (점수 입력 정렬 + MVP 기능)")
 
 # 초기화
 for key in ["players", "matches", "scores", "final_scores"]:
@@ -15,7 +15,7 @@ for key in ["players", "matches", "scores", "final_scores"]:
 
 # 참가자 입력
 st.subheader("1. 참가자 등록")
-names_input = st.text_area("참가자 이름들을 쉼표(,)로 구분하여 입력하세요:", placeholder="예: 패더러, 나달, 조코비치")
+names_input = st.text_area("참가자 이름들을 쉼표(,)로 구분하여 입력하세요:", placeholder="예: Blake, Eunsu, Sara, Jin")
 if names_input:
     st.session_state.players = [name.strip() for name in names_input.split(",") if name.strip()]
     st.success("현재 참가자: " + ", ".join(st.session_state.players))
@@ -54,6 +54,7 @@ if len(st.session_state.players) >= (2 if match_type == "단식" else 4):
         st.session_state.scores = {}
         st.session_state.match_type = match_type
         st.session_state.num_courts = num_courts
+        st.session_state.final_scores = {}
         st.success("✅ 대진표가 생성되었습니다!")
 
 # 병렬 구조 대진표 + 점수 입력
@@ -127,10 +128,15 @@ if st.session_state.matches:
         st.session_state.final_scores = scores
         st.success("✅ 승점이 계산되었습니다!")
 
-# 승점표 출력
+# 승점표 출력 + MVP 선정
 if st.session_state.final_scores:
     st.subheader("4. 승점표 (랭킹순)")
     sorted_scores = sorted(st.session_state.final_scores.items(), key=lambda x: x[1], reverse=True)
     df = pd.DataFrame(sorted_scores, columns=["이름", "승점"])
     df.index += 1
     st.dataframe(df, use_container_width=True)
+
+    # MVP 선정
+    if sorted_scores:
+        mvp_name, mvp_score = sorted_scores[0]
+        st.success(f"🏆 MVP: {mvp_name} ({mvp_score}점)")
