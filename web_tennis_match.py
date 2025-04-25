@@ -7,7 +7,7 @@ from itertools import combinations
 import time
 
 st.set_page_config(page_title="🎾 테니스 대진표 앱", layout="centered")
-st.title("🎾 테니스 대진표 프로그램 (코트 배정 포함 + 점수 오류 수정)")
+st.title("🎾 테니스 대진표 프로그램")
 
 # 세션 상태 초기화
 for key in ["players", "matches", "scores"]:
@@ -17,7 +17,7 @@ for key in ["players", "matches", "scores"]:
 # ✅ 1. 참가자 입력
 st.subheader("1. 참가자 등록")
 
-names_input = st.text_area("참가자 이름들을 쉼표(,)로 구분하여 입력하세요:", placeholder="예: Blake, Eunsu, Sara, Jin")
+names_input = st.text_area("참가자 이름들을 쉼표(,)로 구분하여 입력하세요:", placeholder="예: 홍길동, 김길동, 이길동, 박길동")
 
 if names_input:
     st.session_state.players = [name.strip() for name in names_input.split(",") if name.strip()]
@@ -87,7 +87,7 @@ if st.session_state.matches:
                 team1, team2 = match
                 st.markdown(f"- 코트 {court_idx + 1}: {'+'.join(team1)} vs {'+'.join(team2)}")
 
-# ✅ 4. 점수 입력 및 수정 (점수 오류 수정 포함)
+# ✅ 4. 점수 입력 및 수정 (복식 오류 최종 수정 포함)
 if st.session_state.matches:
     st.subheader("4. 스코어 입력 및 수정")
     edited_scores = {}
@@ -101,8 +101,8 @@ if st.session_state.matches:
             p1, p2 = match
             label = f"Round {idx + 1}: {p1} vs {p2}"
         else:
-            (p1a, p1b), (p2a, p2b) = match
-            label = f"Round {idx + 1}: {p1a}+{p1b} vs {p2a}+{p2b}"
+            team1, team2 = match
+            label = f"Round {idx + 1}: {'+'.join(team1)} vs {'+'.join(team2)}"
 
         with cols[idx % 2]:
             score_input = st.text_input(label, value=default_score, key=key)
@@ -112,7 +112,7 @@ if st.session_state.matches:
         st.session_state.scores.clear()
         for (match, idx), score in edited_scores.items():
             try:
-                if ":" not in score:
+                if not score or ':' not in score:
                     raise ValueError("형식 오류")
                 s1_str, s2_str = score.split(":")
                 s1 = int(s1_str.strip())
@@ -130,7 +130,6 @@ if st.session_state.matches:
                     else:
                         st.session_state.scores[p1] += 1
                         st.session_state.scores[p2] += 1
-
                 else:
                     team1, team2 = match
                     for p in team1 + team2:
