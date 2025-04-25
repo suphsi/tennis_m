@@ -84,16 +84,12 @@ if st.session_state.matches:
                 p1, p2 = match
                 st.markdown(f"- 코트 {court_idx + 1}: {p1} vs {p2}")
             else:
-                if isinstance(match[0], (tuple, list)):
-                    team1, team2 = match
-                elif '+' in match[0] and '+' in match[1]:
-                    team1 = match[0].split('+')
-                    team2 = match[1].split('+')
-                else:
-                    continue  # 예외 케이스 무시
-                st.markdown(f"- 코트 {court_idx + 1}: {'+'.join(team1)} vs {'+'.join(team2)}")
+                team1, team2 = match
+                team1_str = "+".join(team1)
+                team2_str = "+".join(team2)
+                st.markdown(f"- 코트 {court_idx + 1}: {team1_str} vs {team2_str}")
 
-# ✅ 4. 점수 입력 및 수정 (match 구조 완전 자동 감지)
+# ✅ 4. 점수 입력 및 수정 (내부 구조는 tuple 유지)
 if st.session_state.matches:
     st.subheader("4. 스코어 입력 및 수정")
     edited_scores = {}
@@ -107,14 +103,10 @@ if st.session_state.matches:
             p1, p2 = match
             label = f"Round {idx + 1}: {p1} vs {p2}"
         else:
-            if isinstance(match[0], (tuple, list)):
-                team1, team2 = match
-            elif '+' in match[0] and '+' in match[1]:
-                team1 = match[0].split('+')
-                team2 = match[1].split('+')
-            else:
-                continue
-            label = f"Round {idx + 1}: {'+'.join(team1)} vs {'+'.join(team2)}"
+            team1, team2 = match
+            team1_str = "+".join(team1)
+            team2_str = "+".join(team2)
+            label = f"Round {idx + 1}: {team1_str} vs {team2_str}"
 
         with cols[idx % 2]:
             score_input = st.text_input(label, value=default_score, key=key)
@@ -143,14 +135,7 @@ if st.session_state.matches:
                         st.session_state.scores[p1] += 1
                         st.session_state.scores[p2] += 1
                 else:
-                    if isinstance(match[0], (tuple, list)):
-                        team1, team2 = match
-                    elif '+' in match[0] and '+' in match[1]:
-                        team1 = match[0].split('+')
-                        team2 = match[1].split('+')
-                    else:
-                        raise ValueError("팀 구조 파악 실패")
-
+                    team1, team2 = match
                     for p in team1 + team2:
                         st.session_state.scores.setdefault(p, 0)
                     if s1 > s2:
@@ -186,14 +171,10 @@ if st.session_state.scores:
             p1, p2 = match
             match_data.append((f"Round {i+1}", p1, p2))
         else:
-            if isinstance(match[0], (tuple, list)):
-                team1, team2 = match
-            elif '+' in match[0] and '+' in match[1]:
-                team1 = match[0].split('+')
-                team2 = match[1].split('+')
-            else:
-                continue
-            match_data.append((f"Round {i+1}", "+".join(team1), "+".join(team2)))
+            team1, team2 = match
+            team1_str = "+".join(team1)
+            team2_str = "+".join(team2)
+            match_data.append((f"Round {i+1}", team1_str, team2_str))
 
     match_df = pd.DataFrame(match_data, columns=["라운드", "팀1", "팀2"])
 
