@@ -6,7 +6,7 @@ from itertools import combinations
 import time
 
 st.set_page_config(page_title="🎾 테니스 대진표 앱", layout="centered")
-st.title("🎾 테니스 병렬 대진표 프로그램 (점수 입력 정렬 + MVP 기능)")
+st.title("🎾 테니스 병렬 대진표 프로그램")
 
 # 초기화
 for key in ["players", "matches", "scores", "final_scores"]:
@@ -15,7 +15,7 @@ for key in ["players", "matches", "scores", "final_scores"]:
 
 # 참가자 입력
 st.subheader("1. 참가자 등록")
-names_input = st.text_area("참가자 이름들을 쉼표(,)로 구분하여 입력하세요:", placeholder="예: Blake, Eunsu, Sara, Jin")
+names_input = st.text_area("참가자 이름을 쉼표(,)로 구분하여 입력하세요:", placeholder="예: 패더러, 나달, 조코비치")
 if names_input:
     st.session_state.players = [name.strip() for name in names_input.split(",") if name.strip()]
     st.success("현재 참가자: " + ", ".join(st.session_state.players))
@@ -67,7 +67,7 @@ if st.session_state.matches:
     for round_idx, round_matches in enumerate(schedule):
         st.markdown(f"### 🕐 Round {round_idx + 1}")
         for court_idx, match in enumerate(round_matches):
-            cols = st.columns([3, 1, 1, 1, 1, 3])
+            cols = st.columns([5, 1, 1, 1, 1, 5])
 
             if match_type == "단식":
                 team1, team2 = match
