@@ -7,7 +7,7 @@ from itertools import combinations
 import time
 
 st.set_page_config(page_title="🎾 테니스 대진표 앱", layout="centered")
-st.title("🎾 테니스 대진표 프로그램 (코트 배정 포함)")
+st.title("🎾 테니스 대진표 프로그램 (코트 배정 포함 + 점수 오류 수정)")
 
 # 세션 상태 초기화
 for key in ["players", "matches", "scores"]:
@@ -17,7 +17,7 @@ for key in ["players", "matches", "scores"]:
 # ✅ 1. 참가자 입력
 st.subheader("1. 참가자 등록")
 
-names_input = st.text_area("참가자 이름들을 쉼표(,)로 구분하여 입력하세요:", placeholder="예: 김길동, 이길동, 박길동, 최길동")
+names_input = st.text_area("참가자 이름들을 쉼표(,)로 구분하여 입력하세요:", placeholder="예: Blake, Eunsu, Sara, Jin")
 
 if names_input:
     st.session_state.players = [name.strip() for name in names_input.split(",") if name.strip()]
@@ -87,7 +87,7 @@ if st.session_state.matches:
                 team1, team2 = match
                 st.markdown(f"- 코트 {court_idx + 1}: {'+'.join(team1)} vs {'+'.join(team2)}")
 
-# ✅ 4. 점수 입력 및 수정
+# ✅ 4. 점수 입력 및 수정 (점수 오류 수정 포함)
 if st.session_state.matches:
     st.subheader("4. 스코어 입력 및 수정")
     edited_scores = {}
@@ -112,7 +112,11 @@ if st.session_state.matches:
         st.session_state.scores.clear()
         for (match, idx), score in edited_scores.items():
             try:
-                s1, s2 = map(int, score.strip().split(":"))
+                if ":" not in score:
+                    raise ValueError("형식 오류")
+                s1_str, s2_str = score.split(":")
+                s1 = int(s1_str.strip())
+                s2 = int(s2_str.strip())
                 st.session_state[f"score_{idx}"] = score
 
                 if st.session_state.match_type == "단식":
@@ -141,8 +145,8 @@ if st.session_state.matches:
                         for p in team1 + team2:
                             st.session_state.scores[p] += 1
 
-            except:
-                st.warning(f"⚠️ 점수 입력 오류 (예: 2:1)")
+            except Exception:
+                st.warning("⚠️ 점수 입력 오류 (예: 2:1)")
 
     if st.button("🔄 점수 전체 초기화"):
         for idx in range(len(st.session_state.matches)):
