@@ -59,7 +59,7 @@ if len(st.session_state.players) >= (2 if match_type == "단식" else 4):
 
 # 병렬 구조 대진표 + 점수 입력
 if st.session_state.matches:
-    st.subheader("3. 병렬 대진표 + 점수 입력")
+    st.subheader("3. 대진표 + 점수 입력")
     num_courts = st.session_state.num_courts
     matches = st.session_state.matches
     schedule = [matches[i:i+num_courts] for i in range(0, len(matches), num_courts)]
@@ -67,7 +67,7 @@ if st.session_state.matches:
     for round_idx, round_matches in enumerate(schedule):
         st.markdown(f"### 🕐 Round {round_idx + 1}")
         for court_idx, match in enumerate(round_matches):
-            cols = st.columns([5, 1, 1, 1, 1, 5])
+            cols = st.columns([3, 1, 1, 1, 1, 5])
 
             if match_type == "단식":
                 team1, team2 = match
