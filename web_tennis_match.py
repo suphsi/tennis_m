@@ -43,7 +43,7 @@ if st.session_state.new_players:
 if st.session_state.new_players:
     st.divider()
     st.subheader("⚙️ 참가자 관리")
-    if st.button("🚫 참가자 전체 초기화 요청"):
+    if st.button("🚫 참가자 전체 초기화"):
         if st.session_state.round_matches:
             st.warning("⚠️ 이미 대진표가 생성되었습니다.")
             confirm = st.radio("초기화 하시겠습니까?", ("초기화 취소", "초기화 진행"), index=0)
