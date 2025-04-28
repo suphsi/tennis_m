@@ -142,8 +142,8 @@ if st.session_state.round_matches:
         with col5:
             st.markdown(f"**{team2_name}**")
 
-        st.caption(f"⏰ 경기 시간: {current_time.strftime('%H:%M')} ~ {(current_time + datetime.timedelta(minutes=10)).strftime('%H:%M')}")
-        current_time += datetime.timedelta(minutes=10)
+        st.caption(f"⏰ 경기 시간: {current_time.strftime('%H:%M')} ~ {(current_time + datetime.timedelta(minutes=30)).strftime('%H:%M')}")
+        current_time += datetime.timedelta(minutes=30)
 
         if team2 == "BYE":
             winners.append(team1)
