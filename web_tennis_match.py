@@ -37,7 +37,7 @@ if st.session_state.new_players:
         with col2:
             if st.button("❌", key=f"delete_{i}"):
                 st.session_state.new_players.pop(i)
-                st.experimental_rerun()
+                st.rerun()
 
 # 참가자 전체 초기화 버튼
 if st.session_state.new_players:
@@ -55,7 +55,7 @@ if st.session_state.new_players:
                 st.session_state.game_history = []
                 st.session_state.score_record = defaultdict(lambda: {"승":0, "패":0, "득점":0, "실점":0})
                 st.success("✅ 전체 초기화가 완료되었습니다!")
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.info("초기화가 취소되었습니다.")
         else:
@@ -65,7 +65,7 @@ if st.session_state.new_players:
             st.session_state.game_history = []
             st.session_state.score_record = defaultdict(lambda: {"승":0, "패":0, "득점":0, "실점":0})
             st.success("✅ 참가자와 대진표가 초기화되었습니다!")
-            st.experimental_rerun()
+            st.rerun()
 
 # 경기 설정
 st.subheader("2. 경기 설정")
@@ -203,7 +203,7 @@ if st.session_state.round_matches:
             st.session_state.round_matches = next_round
             st.session_state.current_round += 1
             st.session_state.start_time += datetime.timedelta(minutes=10 * len(st.session_state.round_matches))
-            st.experimental_rerun()
+            st.rerun()
 
 # 브래킷 트리 출력
 if st.session_state.game_history:
