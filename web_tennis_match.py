@@ -7,8 +7,8 @@ from itertools import combinations
 import graphviz
 from fpdf import FPDF
 
-st.set_page_config(page_title="🎾 테니스 토너먼트 프로그램", layout="centered")
-st.title("🎾 테니스 토너먼트 + 브래킷 + 개인통계 + PDF 저장")
+st.set_page_config(page_title="🎾 테니스 대진표 생성 프로그램", layout="centered")
+st.title("🎾 테니스 대진표 생성")
 
 # 세션 초기화
 for key in ["players", "matches", "mode", "match_type", "round_matches", "current_round", "final_scores", "game_history", "start_time", "score_record"]:
@@ -23,39 +23,49 @@ if "new_players" not in st.session_state:
 with st.form("player_form", clear_on_submit=True):
     name = st.text_input("이름 입력")
     gender = st.radio("성별 선택", ["남", "여"], horizontal=True)
-    submitted = st.form_submit_button("추가하기")
+    submitted = st.form_submit_button("참가자 추가")
     if submitted and name:
         st.session_state.new_players.append({"name": name.strip(), "gender": gender})
 
+# 참가자 리스트 출력 + 개별 삭제
 if st.session_state.new_players:
-    st.success("현재 참가자:")
-    for p in st.session_state.new_players:
-        st.markdown(f"- {p['name']} ({p['gender']})")
+    st.subheader("현재 참가자:")
+    for i, p in enumerate(st.session_state.new_players):
+        col1, col2 = st.columns([5,1])
+        with col1:
+            st.markdown(f"- {p['name']} ({p['gender']})")
+        with col2:
+            if st.button("❌", key=f"delete_{i}"):
+                st.session_state.new_players.pop(i)
+                st.experimental_rerun()
 
-# ✅ 참가자 초기화 요청 버튼 추가
-st.divider()
-st.subheader("⚙️ 참가자 초기화")
-if st.button("🚫 참가자 초기화 요청"):
-    if st.session_state.round_matches:
-        st.warning("⚠️ 이미 대진표가 생성되었습니다.")
-        confirm = st.radio("초기화 하시겠습니까?", ("초기화 취소", "초기화 진행"), index=0)
+# 참가자 전체 초기화 버튼
+if st.session_state.new_players:
+    st.divider()
+    st.subheader("⚙️ 참가자 관리")
+    if st.button("🚫 참가자 전체 초기화 요청"):
+        if st.session_state.round_matches:
+            st.warning("⚠️ 이미 대진표가 생성되었습니다.")
+            confirm = st.radio("초기화 하시겠습니까?", ("초기화 취소", "초기화 진행"), index=0)
 
-        if confirm == "초기화 진행":
+            if confirm == "초기화 진행":
+                st.session_state.new_players = []
+                st.session_state.players = []
+                st.session_state.round_matches = []
+                st.session_state.game_history = []
+                st.session_state.score_record = defaultdict(lambda: {"승":0, "패":0, "득점":0, "실점":0})
+                st.success("✅ 전체 초기화가 완료되었습니다!")
+                st.experimental_rerun()
+            else:
+                st.info("초기화가 취소되었습니다.")
+        else:
             st.session_state.new_players = []
             st.session_state.players = []
             st.session_state.round_matches = []
             st.session_state.game_history = []
             st.session_state.score_record = defaultdict(lambda: {"승":0, "패":0, "득점":0, "실점":0})
-            st.success("✅ 전체 초기화가 완료되었습니다!")
-        else:
-            st.info("초기화가 취소되었습니다.")
-    else:
-        st.session_state.new_players = []
-        st.session_state.players = []
-        st.session_state.round_matches = []
-        st.session_state.game_history = []
-        st.session_state.score_record = defaultdict(lambda: {"승":0, "패":0, "득점":0, "실점":0})
-        st.success("✅ 참가자와 대진표가 초기화되었습니다!")
+            st.success("✅ 참가자와 대진표가 초기화되었습니다!")
+            st.experimental_rerun()
 
 # 경기 설정
 st.subheader("2. 경기 설정")
