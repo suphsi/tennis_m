@@ -10,7 +10,7 @@ from fpdf import FPDF
 st.set_page_config(page_title="🎾 테니스 토너먼트 프로그램", layout="centered")
 st.title("🎾 테니스 토너먼트 + 브래킷 + 개인통계 + PDF 저장")
 
-# 세션 상태 초기화
+# 세션 초기화
 for key in ["players", "matches", "mode", "match_type", "round_matches", "current_round", "final_scores", "game_history", "start_time", "score_record"]:
     if key not in st.session_state:
         st.session_state[key] = [] if key in ["players", "matches", "round_matches", "game_history"] else {}
@@ -31,6 +31,31 @@ if st.session_state.new_players:
     st.success("현재 참가자:")
     for p in st.session_state.new_players:
         st.markdown(f"- {p['name']} ({p['gender']})")
+
+# ✅ 참가자 초기화 요청 버튼 추가
+st.divider()
+st.subheader("⚙️ 참가자 초기화")
+if st.button("🚫 참가자 초기화 요청"):
+    if st.session_state.round_matches:
+        st.warning("⚠️ 이미 대진표가 생성되었습니다.")
+        confirm = st.radio("초기화 하시겠습니까?", ("초기화 취소", "초기화 진행"), index=0)
+
+        if confirm == "초기화 진행":
+            st.session_state.new_players = []
+            st.session_state.players = []
+            st.session_state.round_matches = []
+            st.session_state.game_history = []
+            st.session_state.score_record = defaultdict(lambda: {"승":0, "패":0, "득점":0, "실점":0})
+            st.success("✅ 전체 초기화가 완료되었습니다!")
+        else:
+            st.info("초기화가 취소되었습니다.")
+    else:
+        st.session_state.new_players = []
+        st.session_state.players = []
+        st.session_state.round_matches = []
+        st.session_state.game_history = []
+        st.session_state.score_record = defaultdict(lambda: {"승":0, "패":0, "득점":0, "실점":0})
+        st.success("✅ 참가자와 대진표가 초기화되었습니다!")
 
 # 경기 설정
 st.subheader("2. 경기 설정")
@@ -170,7 +195,7 @@ if st.session_state.round_matches:
             st.session_state.start_time += datetime.timedelta(minutes=10 * len(st.session_state.round_matches))
             st.experimental_rerun()
 
-# 브래킷 그래픽 출력
+# 브래킷 트리 출력
 if st.session_state.game_history:
     st.subheader("🏆 토너먼트 브래킷")
     dot = graphviz.Digraph()
@@ -206,7 +231,7 @@ if st.session_state.score_record:
     df_stats.index += 1
     st.dataframe(df_stats, use_container_width=True)
 
-# ✅ PDF 저장 기능
+# PDF 저장 기능
 if st.session_state.game_history and st.button("📄 토너먼트 결과 PDF로 저장하기"):
     pdf = FPDF()
     pdf.add_page()
@@ -214,7 +239,6 @@ if st.session_state.game_history and st.button("📄 토너먼트 결과 PDF로 
     pdf.cell(0, 10, "테니스 토너먼트 결과", ln=True, align="C")
     pdf.ln(10)
 
-    # 경기 기록 테이블
     pdf.set_font("Arial", 'B', 12)
     pdf.cell(0, 10, "경기 결과", ln=True)
     pdf.set_font("Arial", '', 10)
@@ -224,7 +248,6 @@ if st.session_state.game_history and st.button("📄 토너먼트 결과 PDF로 
 
     pdf.ln(8)
 
-    # 개인 통계 테이블
     pdf.set_font("Arial", 'B', 12)
     pdf.cell(0, 10, "개인 통계", ln=True)
     pdf.set_font("Arial", '', 10)
@@ -234,13 +257,10 @@ if st.session_state.game_history and st.button("📄 토너먼트 결과 PDF로 
 
     pdf.ln(10)
 
-    # 최종 MVP
-    if st.session_state.game_history:
-        final_winner = st.session_state.game_history[-1]["승자"]
-        pdf.set_font("Arial", 'B', 14)
-        pdf.cell(0, 10, f"🏆 최종 MVP: {final_winner}", ln=True, align="C")
+    final_winner = st.session_state.game_history[-1]["승자"]
+    pdf.set_font("Arial", 'B', 14)
+    pdf.cell(0, 10, f"🏆 최종 MVP: {final_winner}", ln=True, align="C")
 
-    # PDF 출력
     pdf_output = pdf.output(dest='S').encode('latin1')
     st.download_button(
         label="📥 결과 PDF 다운로드",
