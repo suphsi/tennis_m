@@ -7,8 +7,8 @@ from itertools import combinations
 import graphviz
 from fpdf import FPDF
 
-st.set_page_config(page_title="🎾 테니스 대진표 생성 프로그램", layout="centered")
-st.title("🎾 테니스 대진표 생성")
+st.set_page_config(page_title="🎾 테니스 대진표 프로그램", layout="centered")
+st.title("🎾 테니스 대진표")
 
 # 세션 초기화
 for key in ["players", "matches", "mode", "match_type", "round_matches", "current_round", "final_scores", "game_history", "start_time", "score_record"]:
@@ -43,7 +43,7 @@ if st.session_state.new_players:
 if st.session_state.new_players:
     st.divider()
     st.subheader("⚙️ 참가자 관리")
-    if st.button("🚫 참가자 전체 초기화"):
+    if st.button("🚫 참가자 전체 초기화 요청"):
         if st.session_state.round_matches:
             st.warning("⚠️ 이미 대진표가 생성되었습니다.")
             confirm = st.radio("초기화 하시겠습니까?", ("초기화 취소", "초기화 진행"), index=0)
@@ -142,16 +142,15 @@ if st.session_state.round_matches:
         with col5:
             st.markdown(f"**{team2_name}**")
 
-        st.caption(f"⏰ 경기 시간: {current_time.strftime('%H:%M')} ~ {(current_time + datetime.timedelta(minutes=30)).strftime('%H:%M')}")
-        current_time += datetime.timedelta(minutes=30)
+        st.caption(f"⏰ 경기 시간: {current_time.strftime('%H:%M')} ~ {(current_time + datetime.timedelta(minutes=10)).strftime('%H:%M')}")
+        current_time += datetime.timedelta(minutes=10)
 
         if team2 == "BYE":
             winners.append(team1)
             st.info(f"{team1_name} 부전승")
         elif score1 and score2:
             try:
-                s1 = int(score1)
-                s2 = int(score2)
+                s1, s2 = int(score1), int(score2)
                 if s1 > s2:
                     winners.append(team1)
                     winner = team1
@@ -191,7 +190,7 @@ if st.session_state.round_matches:
 
     if st.button("다음 라운드로 진행"):
         if len(winners) == 1:
-            st.success(f"🏆 최종 MVP: {winners[0]}")
+            st.success(f"🏆 최종 우승: {winners[0]}")
             st.session_state.round_matches = []
         else:
             next_round = []
@@ -205,8 +204,8 @@ if st.session_state.round_matches:
             st.session_state.start_time += datetime.timedelta(minutes=10 * len(st.session_state.round_matches))
             st.rerun()
 
-# 브래킷 트리 출력
-if st.session_state.game_history:
+# 🏆 토너먼트 브래킷 출력 (토너먼트 모드일 때만!)
+if st.session_state.game_history and st.session_state.mode == "토너먼트":
     st.subheader("🏆 토너먼트 브래킷")
     dot = graphviz.Digraph()
 
@@ -221,13 +220,7 @@ if st.session_state.game_history:
 
     st.graphviz_chart(dot)
 
-# 경기별 MVP 출력
-if st.session_state.game_history:
-    st.subheader("🏅 경기별 MVP")
-    for game in st.session_state.game_history:
-        st.markdown(f"**Round {game['라운드']} MVP: {game['승자']}** (승자 기준)")
-
-# 개인 통계 출력
+# 📊 개인 통계 출력
 if st.session_state.score_record:
     st.subheader("📊 개인 통계")
     stat_data = []
@@ -241,8 +234,16 @@ if st.session_state.score_record:
     df_stats.index += 1
     st.dataframe(df_stats, use_container_width=True)
 
-# PDF 저장 기능
-if st.session_state.game_history and st.button("📄 토너먼트 결과 PDF로 저장하기"):
+# 🏅 개인 통계 기반 종합 MVP 1~3위 표시
+if not df_stats.empty:
+    st.subheader("🏅 종합 MVP (Top 3)")
+    top3 = df_stats.head(3)
+    medals = ["🥇 1위", "🥈 2위", "🥉 3위"]
+    for idx, row in enumerate(top3.itertuples()):
+        st.markdown(f"**{medals[idx]}: {row.이름}** (승: {row.승}, 득점: {row.득점}, 승률: {row.승률})")
+
+# 📄 PDF 저장 기능
+if st.session_state.game_history and st.button("📥 결과 PDF로 저장하기"):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", 'B', 16)
@@ -265,15 +266,9 @@ if st.session_state.game_history and st.button("📄 토너먼트 결과 PDF로 
         line = f"{row['이름']} - 승: {row['승']} 패: {row['패']} 득점: {row['득점']} 실점: {row['실점']} 승률: {row['승률']}"
         pdf.cell(0, 8, line, ln=True)
 
-    pdf.ln(10)
-
-    final_winner = st.session_state.game_history[-1]["승자"]
-    pdf.set_font("Arial", 'B', 14)
-    pdf.cell(0, 10, f"🏆 최종 MVP: {final_winner}", ln=True, align="C")
-
     pdf_output = pdf.output(dest='S').encode('latin1')
     st.download_button(
-        label="📥 결과 PDF 다운로드",
+        label="📄 PDF 다운로드",
         data=pdf_output,
         file_name="Tennis_Tournament_Result.pdf",
         mime="application/pdf"
