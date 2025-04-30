@@ -55,6 +55,8 @@ with st.expander("2. 경기 설정", expanded=True):
 def create_pairs(players):
     males = [p['name'] for p in players if p['gender'] == "남"]
     females = [p['name'] for p in players if p['gender'] == "여"]
+    random.shuffle(males)
+    random.shuffle(females)
     pairs = []
     for m, f in zip(males, females):
         pairs.append((m, f))
