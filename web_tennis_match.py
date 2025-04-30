@@ -4,7 +4,7 @@ import random
 import pandas as pd
 import datetime
 from collections import defaultdict
-from itertools import combinations
+from itertools import combinations, product
 
 st.set_page_config(page_title="🎾 테니스 토너먼트", layout="centered")
 st.title("🎾 테니스 리그/토너먼트 매치 시스템")
@@ -74,12 +74,19 @@ def generate_matches(players, match_type):
     if match_type == "혼성 복식":
         males = [p['name'] for p in players if p['gender'] == "남"]
         females = [p['name'] for p in players if p['gender'] == "여"]
+        all_possible_pairs = list(product(males, females))
         total_matches = []
 
         for _ in range(game_per_player):
-            random.shuffle(males)
-            random.shuffle(females)
-            round_teams = list(zip(males, females))
+            used_players = set()
+            round_teams = []
+            random.shuffle(all_possible_pairs)
+
+            for m, f in all_possible_pairs:
+                if m not in used_players and f not in used_players:
+                    round_teams.append((m, f))
+                    used_players.update([m, f])
+
             round_matches = list(combinations(round_teams, 2))
             total_matches.extend(round_matches)
 
