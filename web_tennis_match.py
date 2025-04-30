@@ -71,11 +71,27 @@ def generate_matches(players, match_type):
 
 # --- 대진표 생성 ---
 if st.button("🎯 대진표 생성"):
+    base_time = datetime.datetime.combine(datetime.date.today(), start_time)
+    court_count = num_courts if 'num_courts' in locals() else 2
+    court_cycle = [i+1 for i in range(court_count)]
     if len(st.session_state.new_players) < 2:
         st.warning("2명 이상 필요합니다.")
     else:
         st.session_state.players = st.session_state.new_players.copy()
-        st.session_state.round_matches = generate_matches(st.session_state.players, match_type)
+        raw_matches = generate_matches(st.session_state.players, match_type)
+        # 코트 및 시간 자동 배정
+        st.session_state.round_matches = []
+        for i, match in enumerate(raw_matches):
+            court = court_cycle[i % court_count]
+            match_time = base_time + datetime.timedelta(minutes=10*i)
+            st.session_state.round_matches.append({
+                "team1": match[0],
+                "team2": match[1],
+                "court": court,
+                "time": match_time.strftime('%H:%M'),
+                "score1": "",
+                "score2": ""
+            })
         st.session_state.score_record = defaultdict(lambda: {"승":0, "패":0, "득점":0, "실점":0})
         st.session_state.game_history.clear()
         st.success("✅ 대진표가 생성되었습니다.")
@@ -85,6 +101,11 @@ if st.button("🎯 대진표 생성"):
 if st.session_state.round_matches:
     st.subheader("3. 대진표 및 점수 입력")
     for idx, match in enumerate(st.session_state.round_matches):
+        team1 = match['team1']
+        team2 = match['team2']
+        t1 = team1 if isinstance(team1, str) else " + ".join(team1)
+        t2 = team2 if isinstance(team2, str) else " + ".join(team2)
+        st.caption(f"코트 {match['court']} / 시간 {match['time']}")
         team1, team2 = match
         t1 = team1 if isinstance(team1, str) else " + ".join(team1)
         t2 = team2 if isinstance(team2, str) else " + ".join(team2)
@@ -137,6 +158,7 @@ if st.session_state.score_record:
         stats.append((name, r['승'], r['패'], r['득점'], r['실점'], rate))
 
     df = pd.DataFrame(stats, columns=["이름", "승", "패", "득점", "실점", "승률"])
+    st.bar_chart(df.set_index("이름")["승"])
     df = df.sort_values(by=["승", "득점"], ascending=[False, False])
     df.index += 1
     st.dataframe(df, use_container_width=True)
