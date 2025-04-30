@@ -99,8 +99,7 @@ def generate_matches(players, match_type):
         match_count = len(names) * game_per_player // 2
         return all_pairs[:match_count]
 
-    matches = [(names[i], names[i+1]) for i in range(0, len(names) - 1, 2)]
-    return matches all_pairs[:match_count]
+    return [(names[i], names[i+1]) for i in range(0, len(names) - 1, 2)] all_pairs[:match_count]
     return [(names[i], names[i+1]) for i in range(0, len(names)-1, 2)]
 
 # --- 대진표 생성 ---
