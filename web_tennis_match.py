@@ -110,6 +110,14 @@ if st.button("🏆 토너먼트 시작!" if mode == "토너먼트" else "대진�
         st.session_state.score_record = defaultdict(lambda: {"승":0, "패":0, "득점":0, "실점":0})
         st.success("✅ 대진표가 생성되었습니다!")
 
+# 대진표 미리보기 출력 추가
+if st.session_state.round_matches:
+    st.subheader("🎾 생성된 대진표")
+    for i, match in enumerate(st.session_state.round_matches, 1):
+        t1 = match[0] if isinstance(match[0], str) else " + ".join(match[0])
+        t2 = match[1] if isinstance(match[1], str) else " + ".join(match[1])
+        st.markdown(f"**{i}. {t1} vs {t2}**")
+
 # 개인 통계 출력 및 MVP 표시
 if st.session_state.score_record:
     st.subheader("📊 개인 통계")
