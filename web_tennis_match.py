@@ -63,7 +63,7 @@ def create_pairs(players):
 def generate_matches(players, match_type):
     if match_type == "단식":
         names = [p['name'] for p in players]
-    elif match_type == \"복식\":
+    elif match_type == "복식":
         all_players = [p['name'] for p in players]
         random.shuffle(all_players)
         names = [(all_players[i], all_players[i+1]) for i in range(0, len(all_players)-1, 2)]
