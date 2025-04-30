@@ -74,21 +74,19 @@ def generate_matches(players, match_type):
     if match_type == "혼성 복식":
         males = [p['name'] for p in players if p['gender'] == "남"]
         females = [p['name'] for p in players if p['gender'] == "여"]
-        all_possible_pairs = list(product(males, females))
         total_matches = []
 
         for _ in range(game_per_player):
-            used_players = set()
-            round_teams = []
-            random.shuffle(all_possible_pairs)
+            random.shuffle(males)
+            random.shuffle(females)
+            teams = list(zip(males, females))
+            valid_matches = []
 
-            for m, f in all_possible_pairs:
-                if m not in used_players and f not in used_players:
-                    round_teams.append((m, f))
-                    used_players.update([m, f])
+            for t1, t2 in combinations(teams, 2):
+                if not set(t1) & set(t2):  # 같은 사람이 양 팀에 없을 경우만
+                    valid_matches.append((t1, t2))
 
-            round_matches = list(combinations(round_teams, 2))
-            total_matches.extend(round_matches)
+            total_matches.extend(valid_matches)
 
         return total_matches
 
