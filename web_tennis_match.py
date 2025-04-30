@@ -1,4 +1,4 @@
-# ✅ 테니스 토너먼트 전체 코드 (점수 입력 포함 버전)
+# ✅ 반응형 테니스 토너먼트 전체 코드
 import streamlit as st
 import random
 import pandas as pd
@@ -18,36 +18,37 @@ for k in keys:
 st.session_state.setdefault("new_players", [])
 
 # --- 참가자 입력 ---
-st.subheader("1. 참가자 등록")
-with st.form("add_player", clear_on_submit=True):
-    name = st.text_input("이름 입력")
-    gender = st.radio("성별", ["남", "여"], horizontal=True)
-    submitted = st.form_submit_button("추가")
-    if submitted and name:
-        st.session_state.new_players.append({"name": name.strip(), "gender": gender})
+with st.expander("1. 참가자 등록", expanded=True):
+    with st.form("add_player", clear_on_submit=True):
+        name = st.text_input("이름 입력")
+        gender = st.radio("성별", ["남", "여"], horizontal=True)
+        submitted = st.form_submit_button("추가")
+        if submitted and name:
+            st.session_state.new_players.append({"name": name.strip(), "gender": gender})
 
-if st.session_state.new_players:
-    st.subheader("✅ 현재 참가자 목록")
-    for i, p in enumerate(st.session_state.new_players):
-        col1, col2 = st.columns([5, 1])
-        col1.markdown(f"- {p['name']} ({p['gender']})")
-        if col2.button("❌", key=f"del_{i}"):
-            st.session_state.new_players.pop(i)
+    if st.session_state.new_players:
+        st.subheader("✅ 현재 참가자 목록")
+        for i, p in enumerate(st.session_state.new_players):
+            col1, col2 = st.columns([5, 1])
+            col1.markdown(f"- {p['name']} ({p['gender']})")
+            if col2.button("❌", key=f"del_{i}"):
+                st.session_state.new_players.pop(i)
+                st.rerun()
+
+        if st.button("🚫 참가자 전체 초기화"):
+            st.session_state.new_players.clear()
+            st.session_state.players.clear()
+            st.session_state.round_matches.clear()
+            st.session_state.score_record.clear()
+            st.session_state.game_history.clear()
             st.rerun()
 
-    if st.button("🚫 참가자 전체 초기화"):
-        st.session_state.new_players.clear()
-        st.session_state.players.clear()
-        st.session_state.round_matches.clear()
-        st.session_state.score_record.clear()
-        st.session_state.game_history.clear()
-        st.rerun()
-
 # --- 설정 ---
-st.subheader("2. 경기 설정")
-match_type = st.radio("경기 유형", ["단식", "복식", "혼성 복식"], horizontal=True)
-mode = st.radio("진행 방식", ["리그전", "토너먼트"], horizontal=True)
-start_time = st.time_input("경기 시작 시간", value=datetime.time(9, 0))
+with st.expander("2. 경기 설정", expanded=True):
+    match_type = st.radio("경기 유형", ["단식", "복식", "혼성 복식"], horizontal=True)
+    mode = st.radio("진행 방식", ["리그전", "토너먼트"], horizontal=True)
+    num_courts = st.number_input("코트 수", min_value=1, value=2)
+    start_time = st.time_input("경기 시작 시간", value=datetime.time(9, 0))
 
 # --- 매치 생성 함수 ---
 def create_pairs(players):
@@ -71,18 +72,16 @@ def generate_matches(players, match_type):
 
 # --- 대진표 생성 ---
 if st.button("🎯 대진표 생성"):
-    base_time = datetime.datetime.combine(datetime.date.today(), start_time)
-    court_count = num_courts if 'num_courts' in locals() else 2
-    court_cycle = [i+1 for i in range(court_count)]
     if len(st.session_state.new_players) < 2:
         st.warning("2명 이상 필요합니다.")
     else:
         st.session_state.players = st.session_state.new_players.copy()
+        base_time = datetime.datetime.combine(datetime.date.today(), start_time)
+        court_cycle = [i+1 for i in range(num_courts)]
         raw_matches = generate_matches(st.session_state.players, match_type)
-        # 코트 및 시간 자동 배정
         st.session_state.round_matches = []
         for i, match in enumerate(raw_matches):
-            court = court_cycle[i % court_count]
+            court = court_cycle[i % num_courts]
             match_time = base_time + datetime.timedelta(minutes=10*i)
             st.session_state.round_matches.append({
                 "team1": match[0],
@@ -99,71 +98,63 @@ if st.button("🎯 대진표 생성"):
 
 # --- 대진표 + 점수 입력 ---
 if st.session_state.round_matches:
-    st.subheader("3. 대진표 및 점수 입력")
-    for idx, match in enumerate(st.session_state.round_matches):
-        team1 = match['team1']
-        team2 = match['team2']
-        t1 = team1 if isinstance(team1, str) else " + ".join(team1)
-        t2 = team2 if isinstance(team2, str) else " + ".join(team2)
-        st.caption(f"코트 {match['court']} / 시간 {match['time']}")
-        team1, team2 = match
-        t1 = team1 if isinstance(team1, str) else " + ".join(team1)
-        t2 = team2 if isinstance(team2, str) else " + ".join(team2)
-
-        col1, col2, col3, col4, col5 = st.columns([3, 1, 1, 1, 3])
-        col1.markdown(f"**{t1}**")
-        s1 = col2.text_input(" ", key=f"s1_{idx}", label_visibility="collapsed")
-        col3.markdown("vs")
-        s2 = col4.text_input(" ", key=f"s2_{idx}", label_visibility="collapsed")
-        col5.markdown(f"**{t2}**")
-
-    if st.button("✅ 점수 반영"):
+    with st.expander("3. 대진표 및 점수 입력", expanded=True):
         for idx, match in enumerate(st.session_state.round_matches):
-            team1, team2 = match
-            key1 = f"s1_{idx}"
-            key2 = f"s2_{idx}"
-            val1 = st.session_state.get(key1, "").strip()
-            val2 = st.session_state.get(key2, "").strip()
-            if not val1 or not val2 or not val1.isdigit() or not val2.isdigit():
-                continue
-            s1, s2 = int(val1), int(val2)
-            t1_list = team1 if isinstance(team1, tuple) else [team1]
-            t2_list = team2 if isinstance(team2, tuple) else [team2]
+            team1 = match['team1']
+            team2 = match['team2']
+            t1 = team1 if isinstance(team1, str) else " + ".join(team1)
+            t2 = team2 if isinstance(team2, str) else " + ".join(team2)
+            st.caption(f"코트 {match['court']} / 시간 {match['time']}")
+            col1, col2, col3, col4, col5 = st.columns([3, 1, 1, 1, 3])
+            col1.markdown(f"**{t1}**")
+            match['score1'] = col2.text_input(" ", key=f"s1_{idx}", label_visibility="collapsed")
+            col3.markdown("vs")
+            match['score2'] = col4.text_input(" ", key=f"s2_{idx}", label_visibility="collapsed")
+            col5.markdown(f"**{t2}**")
 
-            for p in t1_list:
-                st.session_state.score_record[p]["득점"] += s1
-                st.session_state.score_record[p]["실점"] += s2
-            for p in t2_list:
-                st.session_state.score_record[p]["득점"] += s2
-                st.session_state.score_record[p]["실점"] += s1
-            if s1 > s2:
-                for p in t1_list:
-                    st.session_state.score_record[p]["승"] += 1
-                for p in t2_list:
-                    st.session_state.score_record[p]["패"] += 1
-            elif s2 > s1:
-                for p in t2_list:
-                    st.session_state.score_record[p]["승"] += 1
-                for p in t1_list:
-                    st.session_state.score_record[p]["패"] += 1
-        st.success("✅ 점수가 반영되었습니다.")
+        if st.button("✅ 점수 반영"):
+            for idx, match in enumerate(st.session_state.round_matches):
+                s1, s2 = match['score1'].strip(), match['score2'].strip()
+                if not s1.isdigit() or not s2.isdigit():
+                    continue
+                s1, s2 = int(s1), int(s2)
+                team1 = match['team1'] if isinstance(match['team1'], tuple) else [match['team1']]
+                team2 = match['team2'] if isinstance(match['team2'], tuple) else [match['team2']]
+                for p in team1:
+                    st.session_state.score_record[p]['득점'] += s1
+                    st.session_state.score_record[p]['실점'] += s2
+                for p in team2:
+                    st.session_state.score_record[p]['득점'] += s2
+                    st.session_state.score_record[p]['실점'] += s1
+                if s1 > s2:
+                    for p in team1:
+                        st.session_state.score_record[p]['승'] += 1
+                    for p in team2:
+                        st.session_state.score_record[p]['패'] += 1
+                elif s2 > s1:
+                    for p in team2:
+                        st.session_state.score_record[p]['승'] += 1
+                    for p in team1:
+                        st.session_state.score_record[p]['패'] += 1
+            st.success("✅ 점수가 반영되었습니다.")
 
 # --- 결과 요약 ---
 if st.session_state.score_record:
-    st.subheader("📊 결과 요약 및 종합 MVP")
-    stats = []
-    for name, r in st.session_state.score_record.items():
-        total = r['승'] + r['패']
-        rate = f"{r['승']/total*100:.1f}%" if total else "0%"
-        stats.append((name, r['승'], r['패'], r['득점'], r['실점'], rate))
+    with st.expander("📊 결과 요약 및 종합 MVP", expanded=True):
+        stats = []
+        for name, r in st.session_state.score_record.items():
+            total = r['승'] + r['패']
+            rate = f"{r['승']/total*100:.1f}%" if total else "0%"
+            stats.append((name, r['승'], r['패'], r['득점'], r['실점'], rate))
 
-    df = pd.DataFrame(stats, columns=["이름", "승", "패", "득점", "실점", "승률"])
-    st.bar_chart(df.set_index("이름")["승"])
-    df = df.sort_values(by=["승", "득점"], ascending=[False, False])
-    df.index += 1
-    st.dataframe(df, use_container_width=True)
+        df = pd.DataFrame(stats, columns=["이름", "승", "패", "득점", "실점", "승률"])
+        df = df.sort_values(by=["승", "득점"], ascending=[False, False])
+        df.index += 1
+        st.dataframe(df, use_container_width=True)
 
-    st.markdown("### 🏅 MVP Top 3")
-    for i, row in df.head(3).iterrows():
-        medal = ["🥇", "🥈", "🥉"][i-1] if i <= 3 else ""
-        st.markdown(f"**{medal} {row['이름']}** - 승 {row['승']}, 승률 {row['승률']}")
+        st.bar_chart(df.set_index("이름")["승"])
+
+        st.markdown("### 🏅 MVP Top 3")
+        for i, row in df.head(3).iterrows():
+            medal = ["🥇", "🥈", "🥉"][i-1] if i <= 3 else ""
+            st.markdown(f"**{medal} {row['이름']}** - 승 {row['승']}, 승률 {row['승률']}")
