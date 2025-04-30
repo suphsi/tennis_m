@@ -6,7 +6,7 @@ import datetime
 from collections import defaultdict
 from itertools import combinations
 
-st.set_page_config(page_title="🎾 테니스 토너먼트", layout="wide")
+st.set_page_config(page_title="🎾 테니스 토너먼트", layout="centered")
 st.title("🎾 테니스 리그/토너먼트 매치 시스템")
 
 # --- 초기 세션값 설정 ---
