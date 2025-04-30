@@ -76,10 +76,10 @@ def generate_matches(players, match_type):
         females = [p['name'] for p in players if p['gender'] == "여"]
         team_pool = []
         min_pairs = min(len(males), len(females))
-        for _ in range(min_pairs):
-            random.shuffle(males)
-            random.shuffle(females)
-            team_pool.append((males[0], females[0]))
+        for _ in range(min_pairs * game_per_player):
+            m = random.choice(males)
+            f = random.choice(females)
+            team_pool.append((m, f))
         return list(combinations(team_pool, 2))
 
     if match_type == "단식":
@@ -96,6 +96,7 @@ def generate_matches(players, match_type):
         all_pairs = list(combinations(names, 2))
         match_count = len(names) * game_per_player // 2
         return all_pairs[:match_count]
+
     return [(names[i], names[i+1]) for i in range(0, len(names)-1, 2)] all_pairs[:match_count]
     return [(names[i], names[i+1]) for i in range(0, len(names)-1, 2)]
 
