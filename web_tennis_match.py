@@ -74,15 +74,15 @@ def generate_matches(players, match_type):
     if match_type == "혼성 복식":
         males = [p['name'] for p in players if p['gender'] == "남"]
         females = [p['name'] for p in players if p['gender'] == "여"]
-        team_pool = []
-        min_pairs = min(len(males), len(females))
+        total_matches = []
 
-        for _ in range(min_pairs * game_per_player):
-            m = random.choice(males)
-            f = random.choice(females)
-            team_pool.append((m, f))
+        for _ in range(game_per_player):
+            random.shuffle(males)
+            random.shuffle(females)
+            teams = list(zip(males, females))
+            total_matches.extend(combinations(teams, 2))
 
-        return list(combinations(team_pool, 2))
+        return total_matches
 
     if match_type == "단식":
         names = [p['name'] for p in players]
