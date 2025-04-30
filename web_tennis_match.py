@@ -55,10 +55,19 @@ with st.expander("2. 경기 설정", expanded=True):
 def create_pairs(players):
     males = [p['name'] for p in players if p['gender'] == "남"]
     females = [p['name'] for p in players if p['gender'] == "여"]
-    random.shuffle(males)
-    random.shuffle(females)
-    min_len = min(len(males), len(females))
-    pairs = [(males[i], females[i]) for i in range(min_len)]
+    pairs = []
+    used_males = set()
+    used_females = set()
+    while len(used_males) < len(males) and len(used_females) < len(females):
+        available_males = [m for m in males if m not in used_males]
+        available_females = [f for f in females if f not in used_females]
+        if not available_males or not available_females:
+            break
+        m = random.choice(available_males)
+        f = random.choice(available_females)
+        pairs.append((m, f))
+        used_males.add(m)
+        used_females.add(f)
     return pairs
 
 def generate_matches(players, match_type):
