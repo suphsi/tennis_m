@@ -47,6 +47,7 @@ with st.expander("1. 참가자 등록", expanded=True):
 with st.expander("2. 경기 설정", expanded=True):
     match_type = st.radio("경기 유형", ["단식", "복식", "혼성 복식"], horizontal=True)
     mode = st.radio("진행 방식", ["리그전", "토너먼트"], horizontal=True)
+    game_per_player = st.number_input("1인당 경기 수 (리그전 전용)", min_value=1, max_value=10, value=2)
     num_courts = st.number_input("코트 수", min_value=1, value=2)
     start_time = st.time_input("경기 시작 시간", value=datetime.time(9, 0))
 
@@ -68,7 +69,12 @@ def generate_matches(players, match_type):
         names = create_pairs(players)
     else:
         names = []
-    return list(combinations(names, 2))
+    if mode == "리그전":
+        random.shuffle(names)
+        all_pairs = list(combinations(names, 2))
+        match_count = len(names) * game_per_player // 2
+        return all_pairs[:match_count]
+    return [(names[i], names[i+1]) for i in range(0, len(names)-1, 2)]
 
 # --- 대진표 생성 ---
 if st.button("🎯 대진표 생성"):
