@@ -71,21 +71,32 @@ def create_pairs(players):
     return pairs
 
 def generate_matches(players, match_type):
+    if match_type == "혼성 복식":
+        males = [p['name'] for p in players if p['gender'] == "남"]
+        females = [p['name'] for p in players if p['gender'] == "여"]
+        team_pool = []
+        min_pairs = min(len(males), len(females))
+        for _ in range(min_pairs):
+            random.shuffle(males)
+            random.shuffle(females)
+            team_pool.append((males[0], females[0]))
+        return list(combinations(team_pool, 2))
+
     if match_type == "단식":
         names = [p['name'] for p in players]
     elif match_type == "복식":
         all_players = [p['name'] for p in players]
         random.shuffle(all_players)
         names = [(all_players[i], all_players[i+1]) for i in range(0, len(all_players)-1, 2)]
-    elif match_type == "혼성 복식":
-        names = create_pairs(players)
     else:
         names = []
+
     if mode == "리그전":
         random.shuffle(names)
         all_pairs = list(combinations(names, 2))
         match_count = len(names) * game_per_player // 2
         return all_pairs[:match_count]
+    return [(names[i], names[i+1]) for i in range(0, len(names)-1, 2)] all_pairs[:match_count]
     return [(names[i], names[i+1]) for i in range(0, len(names)-1, 2)]
 
 # --- 대진표 생성 ---
