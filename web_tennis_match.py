@@ -89,7 +89,7 @@ if st.session_state.round_matches:
         t1 = team1 if isinstance(team1, str) else " + ".join(team1)
         t2 = team2 if isinstance(team2, str) else " + ".join(team2)
 
-        col1, col2, col3, col4, col5 = st.columns([2, 1, 1, 2])
+        col1, col2, col3, col4, col5 = st.columns([3, 1, 1, 1, 3])
         col1.markdown(f"**{t1}**")
         s1 = col2.text_input(" ", key=f"s1_{idx}", label_visibility="collapsed")
         col3.markdown("vs")
@@ -145,11 +145,3 @@ if st.session_state.score_record:
     for i, row in df.head(3).iterrows():
         medal = ["🥇", "🥈", "🥉"][i-1] if i <= 3 else ""
         st.markdown(f"**{medal} {row['이름']}** - 승 {row['승']}, 승률 {row['승률']}")
-
-        pdf_output = pdf.output(dest='S').encode('latin1')
-        st.download_button(
-            label="📄 PDF 다운로드",
-            data=pdf_output,
-            file_name="Tennis_Tournament_Result.pdf",
-            mime="application/pdf"
-        )
