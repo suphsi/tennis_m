@@ -90,7 +90,7 @@ if st.button("🎯 대진표 생성"):
         st.session_state.round_matches = []
         for i, match in enumerate(raw_matches):
             court = court_cycle[i % num_courts]
-            match_time = base_time + datetime.timedelta(minutes=10*i)
+            match_time = base_time + datetime.timedelta(minutes=30*i)
             st.session_state.round_matches.append({
                 "team1": match[0],
                 "team2": match[1],
