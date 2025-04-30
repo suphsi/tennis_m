@@ -79,8 +79,9 @@ def generate_matches(players, match_type):
         for _ in range(game_per_player):
             random.shuffle(males)
             random.shuffle(females)
-            teams = list(zip(males, females))
-            total_matches.extend(combinations(teams, 2))
+            round_teams = list(zip(males, females))
+            round_matches = list(combinations(round_teams, 2))
+            total_matches.extend(round_matches)
 
         return total_matches
 
