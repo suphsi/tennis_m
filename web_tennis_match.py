@@ -89,7 +89,7 @@ if st.session_state.round_matches:
         t1 = team1 if isinstance(team1, str) else " + ".join(team1)
         t2 = team2 if isinstance(team2, str) else " + ".join(team2)
 
-        col1, col2, col3, col4, col5 = st.columns([3, 1, 1, 1, 3])
+        col1, col2, col3, col4, col5 = st.columns([2, 1, 1, 2])
         col1.markdown(f"**{t1}**")
         s1 = col2.text_input(" ", key=f"s1_{idx}", label_visibility="collapsed")
         col3.markdown("vs")
