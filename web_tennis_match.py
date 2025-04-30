@@ -57,9 +57,8 @@ def create_pairs(players):
     females = [p['name'] for p in players if p['gender'] == "여"]
     random.shuffle(males)
     random.shuffle(females)
-    pairs = []
-    for m, f in zip(males, females):
-        pairs.append((m, f))
+    min_len = min(len(males), len(females))
+    pairs = [(males[i], females[i]) for i in range(min_len)]
     return pairs
 
 def generate_matches(players, match_type):
