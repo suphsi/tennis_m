@@ -63,8 +63,10 @@ def create_pairs(players):
 def generate_matches(players, match_type):
     if match_type == "단식":
         names = [p['name'] for p in players]
-    elif match_type == "복식":
-        names = list(combinations([p['name'] for p in players], 2))
+    elif match_type == \"복식\":
+        all_players = [p['name'] for p in players]
+        random.shuffle(all_players)
+        names = [(all_players[i], all_players[i+1]) for i in range(0, len(all_players)-1, 2)]
     elif match_type == "혼성 복식":
         names = create_pairs(players)
     else:
@@ -88,7 +90,7 @@ if st.button("🎯 대진표 생성"):
         st.session_state.round_matches = []
         for i, match in enumerate(raw_matches):
             court = court_cycle[i % num_courts]
-            match_time = base_time + datetime.timedelta(minutes=30*i)
+            match_time = base_time + datetime.timedelta(minutes=10*i)
             st.session_state.round_matches.append({
                 "team1": match[0],
                 "team2": match[1],
