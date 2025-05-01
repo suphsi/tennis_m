@@ -9,6 +9,21 @@ from itertools import combinations, product
 st.set_page_config(page_title="🎾 테니스 토너먼트", layout="centered")
 st.title("🎾 테니스 리그/토너먼트 매치 시스템")
 
+# 우클릭 및 F12 방지
+components.html(
+    """
+    <script>
+    document.addEventListener("contextmenu", event => event.preventDefault());
+    document.addEventListener("keydown", function(e) {
+        if (e.key === "F12" || (e.ctrlKey && e.key.toLowerCase() === "u")) {
+            e.preventDefault();
+        }
+    });
+    </script>
+    """,
+    height=0
+)
+
 # --- 초기 세션값 설정 ---
 keys = ["players", "matches", "mode", "match_type", "round_matches", "current_round", "final_scores", "game_history", "start_time", "score_record"]
 for k in keys:
