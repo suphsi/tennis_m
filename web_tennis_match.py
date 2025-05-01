@@ -75,23 +75,20 @@ def generate_matches(players, match_type):
         males = [p['name'] for p in players if p['gender'] == "남"]
         females = [p['name'] for p in players if p['gender'] == "여"]
         total_matches = []
-        seen_matches = set()
 
-        max_matches = game_per_player * (len(males) + len(females)) // 2
+        for _ in range(game_per_player):
+            round_matches = []
+            round_males = males[:]
+            round_females = females[:]
+            random.shuffle(round_males)
+            random.shuffle(round_females)
 
-        while len(total_matches) < max_matches:
-            random.shuffle(males)
-            random.shuffle(females)
-            teams = list(zip(males, females))
-            for t1, t2 in combinations(teams, 2):
-                if set(t1) & set(t2):
-                    continue  # 동일한 사람이 양 팀에 있으면 건너뜀
-                match_key = frozenset([frozenset(t1), frozenset(t2)])
-                if match_key not in seen_matches or len(total_matches) + 1 > len(seen_matches):
-                    total_matches.append((t1, t2))
-                    seen_matches.add(match_key)
-                if len(total_matches) >= max_matches:
-                    break
+            while len(round_males) >= 2 and len(round_females) >= 2:
+                team1 = (round_males.pop(), round_females.pop())
+                team2 = (round_males.pop(), round_females.pop())
+                round_matches.append((team1, team2))
+
+            total_matches.extend(round_matches)
 
         return total_matches
 
