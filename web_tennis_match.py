@@ -1,4 +1,5 @@
 # ✅ 반응형 테니스 토너먼트 전체 코드
+import streamlit.components.v1 as components
 import streamlit as st
 import random
 import pandas as pd
@@ -101,7 +102,11 @@ def generate_matches(players, match_type):
                 continue
             if set(t1) & set(t2):
                 continue
-            p1, p2 = t1
+        if len(matches) >= 2:
+            prev1 = set().union(*matches[-1])
+            prev2 = set().union(*matches[-2])
+            if set(t1 + t2) & prev1 or set(t1 + t2) & prev2:
+                p1, p2 = t1
             p3, p4 = t2
             if (match_counter[p1] < game_per_player or match_counter[p2] < game_per_player or
                 match_counter[p3] < game_per_player or match_counter[p4] < game_per_player):
@@ -119,6 +124,19 @@ def generate_matches(players, match_type):
         matches = []
         for p1, p2 in all_matches:
             if match_counter[p1] < game_per_player or match_counter[p2] < game_per_player:
+                if len(matches) >= 2:
+                    prev1 = matches[-1]
+                    prev2 = matches[-2]
+                    if p1 in prev1 or p1 in prev2 or p2 in prev1 or p2 in prev2:
+                        pass
+                    else:
+                        matches.append((p1, p2))
+                        match_counter[p1] += 1
+                        match_counter[p2] += 1
+                else:
+                    matches.append((p1, p2))
+                    match_counter[p1] += 1
+                    match_counter[p2] += 1
                 matches.append((p1, p2))
                 match_counter[p1] += 1
                 match_counter[p2] += 1
@@ -178,7 +196,7 @@ if st.button("🎯 대진표 생성"):
         st.session_state.round_matches = []
         for i, match in enumerate(raw_matches):
             court = court_cycle[i % num_courts]
-            match_time = base_time + datetime.timedelta(minutes=30*i)
+            match_time = base_time + datetime.timedelta(minutes=10*i)
             st.session_state.round_matches.append({
                 "team1": match[0],
                 "team2": match[1],
