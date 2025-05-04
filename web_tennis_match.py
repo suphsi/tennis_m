@@ -5,7 +5,6 @@ import pandas as pd
 import datetime
 from collections import defaultdict
 from itertools import combinations, product
-import streamlit.components.v1 as components
 
 st.set_page_config(page_title="🎾 테니스 토너먼트", layout="centered")
 st.title("🎾 테니스 리그/토너먼트 매치 시스템")
@@ -138,7 +137,7 @@ if st.button("🎯 대진표 생성"):
         st.session_state.round_matches = []
         for i, match in enumerate(raw_matches):
             court = court_cycle[i % num_courts]
-            match_time = base_time + datetime.timedelta(minutes=30*i)
+            match_time = base_time + datetime.timedelta(minutes=10*i)
             st.session_state.round_matches.append({
                 "team1": match[0],
                 "team2": match[1],
