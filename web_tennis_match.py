@@ -41,18 +41,75 @@ if st.button("대진표 생성"):
             all_matches = list(combinations(names, 2))
             random.shuffle(all_matches)
             match_counter = {name: 0 for name in names}
+            last_played_round = {name: -99 for name in names}
             matches = []
-            recent_players = []
 
-            for match in all_matches:
-                p1, p2 = match
-                if match_counter[p1] < game_per_player or match_counter[p2] < game_per_player:
-                    if p1 in recent_players[-4:] or p2 in recent_players[-4:]:
+            round_num = 0
+            for p1, p2 in all_matches:
+                if match_counter[p1] < game_per_player and match_counter[p2] < game_per_player:
+                    if round_num - last_played_round[p1] < 2 or round_num - last_played_round[p2] < 2:
                         continue
                     matches.append((p1, p2))
                     match_counter[p1] += 1
                     match_counter[p2] += 1
-                    recent_players.extend([p1, p2])
+                    last_played_round[p1] = round_num
+                    last_played_round[p2] = round_num
+                    round_num += 1
+            return matches
+
+        elif match_type == "복식":
+            all_players = [p['name'] for p in players]
+            all_pairs = list(combinations(all_players, 2))
+            random.shuffle(all_pairs)
+            team_pool = [(p1, p2) for p1, p2 in all_pairs if p1 != p2]
+            all_team_matches = list(combinations(team_pool, 2))
+            random.shuffle(all_team_matches)
+            match_counter = {player: 0 for player in all_players}
+            last_played_round = {player: -99 for player in all_players}
+            matches = []
+            round_num = 0
+
+            for t1, t2 in all_team_matches:
+                if set(t1) & set(t2):
+                    continue
+                all_players_in_match = set(t1 + t2)
+                if any(round_num - last_played_round[p] < 2 for p in all_players_in_match):
+                    continue
+                if all(match_counter[p] < game_per_player for p in all_players_in_match):
+                    matches.append((t1, t2))
+                    for p in all_players_in_match:
+                        match_counter[p] += 1
+                        last_played_round[p] = round_num
+                    round_num += 1
+            return matches
+
+        elif match_type == "혼성 복식":
+            males = [p['name'] for p in players if p['gender'] == "남"]
+            females = [p['name'] for p in players if p['gender'] == "여"]
+            team_pool = list(product(males, females))
+            all_team_matches = list(combinations(team_pool, 2))
+            random.shuffle(all_team_matches)
+            match_counter = {name: 0 for name in males + females}
+            last_played_round = {name: -99 for name in males + females}
+            matches = []
+            used_teams = set()
+            round_num = 0
+
+            for t1, t2 in all_team_matches:
+                if t1 in used_teams or t2 in used_teams:
+                    continue
+                if set(t1) & set(t2):
+                    continue
+                all_players_in_match = set(t1 + t2)
+                if any(round_num - last_played_round[p] < 2 for p in all_players_in_match):
+                    continue
+                if all(match_counter[p] < game_per_player for p in all_players_in_match):
+                    matches.append((t1, t2))
+                    used_teams.update([t1, t2])
+                    for p in all_players_in_match:
+                        match_counter[p] += 1
+                        last_played_round[p] = round_num
+                    round_num += 1
             return matches
 
         elif match_type == "복식":
