@@ -89,30 +89,71 @@ def generate_matches(players, match_type):
     if match_type == "혼성 복식":
         males = [p['name'] for p in players if p['gender'] == "남"]
         females = [p['name'] for p in players if p['gender'] == "여"]
-        total_matches = []
+        team_pool = list(product(males, females))
+        random.shuffle(team_pool)
 
-        for _ in range(game_per_player):
-            round_matches = []
-            round_males = males[:]
-            round_females = females[:]
-            random.shuffle(round_males)
-            random.shuffle(round_females)
+        match_counter = {name: 0 for name in males + females}
+        matches = []
+        used_teams = set()
 
-            while len(round_males) >= 2 and len(round_females) >= 2:
-                team1 = (round_males.pop(), round_females.pop())
-                team2 = (round_males.pop(), round_females.pop())
-                round_matches.append((team1, team2))
-
-            total_matches.extend(round_matches)
-
-        return total_matches
+        for t1, t2 in combinations(team_pool, 2):
+            if t1 in used_teams or t2 in used_teams:
+                continue
+            if set(t1) & set(t2):
+                continue
+            p1, p2 = t1
+            p3, p4 = t2
+            if (match_counter[p1] < game_per_player or match_counter[p2] < game_per_player or
+                match_counter[p3] < game_per_player or match_counter[p4] < game_per_player):
+                matches.append((t1, t2))
+                used_teams.update([t1, t2])
+                for p in [p1, p2, p3, p4]:
+                    match_counter[p] += 1
+        return matches
 
     if match_type == "단식":
         names = [p['name'] for p in players]
+        all_matches = list(combinations(names, 2))
+        random.shuffle(all_matches)
+        match_counter = {name: 0 for name in names}
+        matches = []
+        for p1, p2 in all_matches:
+            if match_counter[p1] < game_per_player or match_counter[p2] < game_per_player:
+                matches.append((p1, p2))
+                match_counter[p1] += 1
+                match_counter[p2] += 1
+        return matches
+
     elif match_type == "복식":
         all_players = [p['name'] for p in players]
-        random.shuffle(all_players)
-        names = [(all_players[i], all_players[i+1]) for i in range(0, len(all_players) - 1, 2)]
+        all_pairs = list(combinations(all_players, 2))
+        random.shuffle(all_pairs)
+        used_players = set()
+        team_pool = []
+
+        for p1, p2 in all_pairs:
+            if p1 not in used_players and p2 not in used_players:
+                team_pool.append((p1, p2))
+                used_players.update([p1, p2])
+            if len(used_players) >= len(all_players):
+                break
+
+        match_counter = {player: 0 for player in all_players}
+        all_team_matches = list(combinations(team_pool, 2))
+        random.shuffle(all_team_matches)
+        matches = []
+        for t1, t2 in all_team_matches:
+            if set(t1) & set(t2):
+                continue
+            p1, p2 = t1
+            p3, p4 = t2
+            if (match_counter[p1] < game_per_player or match_counter[p2] < game_per_player or
+                match_counter[p3] < game_per_player or match_counter[p4] < game_per_player):
+                matches.append((t1, t2))
+                for p in [p1, p2, p3, p4]:
+                    match_counter[p] += 1
+        return matches
+
     else:
         names = []
 
@@ -137,7 +178,7 @@ if st.button("🎯 대진표 생성"):
         st.session_state.round_matches = []
         for i, match in enumerate(raw_matches):
             court = court_cycle[i % num_courts]
-            match_time = base_time + datetime.timedelta(minutes=10*i)
+            match_time = base_time + datetime.timedelta(minutes=30*i)
             st.session_state.round_matches.append({
                 "team1": match[0],
                 "team2": match[1],
