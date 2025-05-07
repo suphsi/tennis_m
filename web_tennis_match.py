@@ -73,7 +73,7 @@ def create_pairs(players):
 
 def generate_matches(match_type, game_per_player, players):
     def can_play(player, history):
-        return not (len(history) >= 2 and player in history[-1] and player in history[-2])
+        return not (len(history) >= 3 and player in history[-1] and player in history[-2] and player in history[-3])
 
     if match_type == "단식":
         names = [p['name'] for p in players]
@@ -136,7 +136,6 @@ def generate_matches(match_type, game_per_player, players):
             if all(m >= game_per_player for m in match_counter.values()):
                 break
         return matches
-
 
 # --- 대진표 생성 ---
 if st.button("🎯 대진표 생성"):
