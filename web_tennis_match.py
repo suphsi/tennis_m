@@ -13,12 +13,27 @@ game_per_player = st.number_input("인당 경기 수", min_value=1, max_value=10
 
 players = []
 st.subheader("1. 참가자 등록")
-num_players = st.number_input("참가자 수 입력 (짝수)", min_value=2, step=2)
+if 'player_inputs' not in st.session_state:
+    st.session_state.player_inputs = []
 
-if 'player_names' not in st.session_state:
-    st.session_state.player_names = []
-
+new_name = st.text_input("참가자 이름 입력")
 if match_type == "혼성 복식":
+    new_gender = st.radio("성별 선택", ["남", "여"], horizontal=True)
+    if st.button("참가자 추가") and new_name:
+        st.session_state.player_inputs.append({"name": new_name.strip(), "gender": new_gender})
+else:
+    if st.button("참가자 추가") and new_name:
+        st.session_state.player_inputs.append({"name": new_name.strip()})
+
+players = st.session_state.player_inputs
+if players:
+    st.markdown("#### 참가자 목록")
+    for p in players:
+        if isinstance(p, dict):
+            if 'gender' in p:
+                st.write(f"{p['name']} ({p['gender']})")
+            else:
+                st.write(p['name'])
     gender_labels = ["남", "여"]
     for i in range(num_players):
         name = st.text_input(f"참가자 {i+1} 이름")
