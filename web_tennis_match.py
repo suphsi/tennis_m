@@ -5,7 +5,6 @@ import pandas as pd
 import datetime
 from collections import defaultdict
 from itertools import combinations
-from itertools import combinations, product
 
 st.set_page_config(page_title="🎾 테니스 토너먼트", layout="centered")
 st.title("🎾 테니스 리그/토너먼트 매치 시스템")
@@ -71,71 +70,38 @@ def create_pairs(players):
         used_females.add(f)
     return pairs
 
-def generate_matches(match_type, game_per_player, players):
-    def can_play(player, history):
-        return not (len(history) >= 3 and player in history[-1] and player in history[-2] and player in history[-3])
+def generate_matches(players, match_type):
+    if match_type == "혼성 복식":
+        males = [p['name'] for p in players if p['gender'] == "남"]
+        females = [p['name'] for p in players if p['gender'] == "여"]
+        total_matches = []
+
+        for _ in range(game_per_player):
+            random.shuffle(males)
+            random.shuffle(females)
+            round_teams = list(zip(males, females))
+            round_matches = list(combinations(round_teams, 2))
+            total_matches.extend(round_matches)
+
+        return total_matches
 
     if match_type == "단식":
         names = [p['name'] for p in players]
-        all_matches = list(combinations(names, 2))
-        random.shuffle(all_matches)
-        match_counter = {name: 0 for name in names}
-        matches = []
-
-        for p1, p2 in all_matches:
-            if not can_play(p1, matches) or not can_play(p2, matches):
-                continue
-            matches.append((p1, p2))
-            match_counter[p1] += 1
-            match_counter[p2] += 1
-            if all(m >= game_per_player for m in match_counter.values()):
-                break
-        return matches
-
     elif match_type == "복식":
         all_players = [p['name'] for p in players]
-        teams = list(combinations(all_players, 2))
-        random.shuffle(teams)
-        team_matches = list(combinations(teams, 2))
-        random.shuffle(team_matches)
-        match_counter = {p: 0 for p in all_players}
-        matches = []
+        random.shuffle(all_players)
+        names = [(all_players[i], all_players[i+1]) for i in range(0, len(all_players) - 1, 2)]
+    else:
+        names = []
 
-        for t1, t2 in team_matches:
-            if set(t1) & set(t2):
-                continue
-            participants = t1 + t2
-            if any(not can_play(p, matches) for p in participants):
-                continue
-            matches.append((t1, t2))
-            for p in participants:
-                match_counter[p] += 1
-            if all(m >= game_per_player for m in match_counter.values()):
-                break
-        return matches
+    if mode == "리그전":
+        random.shuffle(names)
+        all_pairs = list(combinations(names, 2))
+        match_count = len(names) * game_per_player // 2
+        return all_pairs[:match_count]
 
-    elif match_type == "혼성 복식":
-        males = [p['name'] for p in players if p['gender'] == "남"]
-        females = [p['name'] for p in players if p['gender'] == "여"]
-        mixed_teams = list(product(males, females))
-        random.shuffle(mixed_teams)
-        team_matches = list(combinations(mixed_teams, 2))
-        random.shuffle(team_matches)
-        match_counter = {name: 0 for name in males + females}
-        matches = []
-
-        for t1, t2 in team_matches:
-            if set(t1) & set(t2):
-                continue
-            participants = t1 + t2
-            if any(not can_play(p, matches) for p in participants):
-                continue
-            matches.append((t1, t2))
-            for p in participants:
-                match_counter[p] += 1
-            if all(m >= game_per_player for m in match_counter.values()):
-                break
-        return matches
+    matches = [(names[i], names[i+1]) for i in range(0, len(names) - 1, 2)]
+    return matches
 
 # --- 대진표 생성 ---
 if st.button("🎯 대진표 생성"):
