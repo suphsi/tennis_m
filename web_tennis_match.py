@@ -165,7 +165,7 @@ if st.session_state.round_matches:
                         st.session_state.score_record[p]['패'] += 1
             st.success("✅ 점수가 반영되었습니다.")
 
-# --- 결과 요약 ---
+# --- 결과 요약 및 실시간 순위 ---
 if st.session_state.score_record:
     with st.expander("📊 결과 요약 및 종합 MVP", expanded=True):
         stats = []
@@ -181,7 +181,12 @@ if st.session_state.score_record:
 
         st.bar_chart(df.set_index("이름")["승"])
 
-        st.markdown("### 🏅 MVP Top 3")
+        st.markdown("### 🏅 실시간 MVP 순위")
         for i, row in df.head(3).iterrows():
             medal = ["🥇", "🥈", "🥉"][i-1] if i <= 3 else ""
             st.markdown(f"**{medal} {row['이름']}** - 승 {row['승']}, 승률 {row['승률']}")
+
+        st.markdown("---")
+        st.markdown("### 📌 전체 순위 현황")
+        for i, row in df.iterrows():
+            st.write(f"{i}. {row['이름']} | 승: {row['승']}, 패: {row['패']}, 승률: {row['승률']}")
