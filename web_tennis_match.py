@@ -52,35 +52,33 @@ with st.expander("2. 경기 설정", expanded=True):
 
 # --- 매치 생성 함수 ---
 def generate_matches(players, match_type):
-    history = []
-    match_counter = defaultdict(int)
-    recent_participants = []
-    matches = []
-
-    def can_play(player):
-        return recent_participants.count(player) < 2
-
-    def update_recent(participants):
-        recent_participants.extend(participants)
-        if len(recent_participants) > 6:
-            del recent_participants[:len(recent_participants)-6]
+    from collections import defaultdict
+    import random
+    from itertools import combinations
 
     names = [p['name'] for p in players]
+    matches = []
+    match_counter = defaultdict(int)
+
+    def violates_3_in_a_row_limit(player):
+        if len(matches) < 3:
+            return False
+        last_three = matches[-3:]
+        return all(player in m for m in last_three)
 
     if match_type == "단식":
         while len(matches) < len(names) * game_per_player // 2:
             random.shuffle(names)
             for i in range(0, len(names) - 1):
                 p1, p2 = names[i], names[i+1]
-                if not can_play(p1) or not can_play(p2):
+                if violates_3_in_a_row_limit(p1) or violates_3_in_a_row_limit(p2):
                     continue
                 matches.append((p1, p2))
-                update_recent([p1, p2])
                 match_counter[p1] += 1
                 match_counter[p2] += 1
                 if all(match_counter[n] >= game_per_player for n in names):
                     break
-    elif match_type == "복식" or match_type == "혼성 복식":
+    elif match_type in ["복식", "혼성 복식"]:
         all_pairs = list(combinations(names, 2))
         random.shuffle(all_pairs)
         team_matches = list(combinations(all_pairs, 2))
@@ -90,10 +88,9 @@ def generate_matches(players, match_type):
                 if set(t1) & set(t2):
                     continue
                 participants = list(t1 + t2)
-                if any(not can_play(p) for p in participants):
+                if any(violates_3_in_a_row_limit(p) for p in participants):
                     continue
                 matches.append((t1, t2))
-                update_recent(participants)
                 for p in participants:
                     match_counter[p] += 1
                 if all(match_counter[n] >= game_per_player for n in names):
