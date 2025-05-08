@@ -1,4 +1,3 @@
-# ✅ 반응형 테니스 토너먼트 전체 코드
 import streamlit as st
 import random
 import pandas as pd
@@ -52,55 +51,53 @@ with st.expander("2. 경기 설정", expanded=True):
     start_time = st.time_input("경기 시작 시간", value=datetime.time(9, 0))
 
 # --- 매치 생성 함수 ---
-def create_pairs(players):
-    males = [p['name'] for p in players if p['gender'] == "남"]
-    females = [p['name'] for p in players if p['gender'] == "여"]
-    pairs = []
-    used_males = set()
-    used_females = set()
-    while len(used_males) < len(males) and len(used_females) < len(females):
-        available_males = [m for m in males if m not in used_males]
-        available_females = [f for f in females if f not in used_females]
-        if not available_males or not available_females:
-            break
-        m = random.choice(available_males)
-        f = random.choice(available_females)
-        pairs.append((m, f))
-        used_males.add(m)
-        used_females.add(f)
-    return pairs
-
 def generate_matches(players, match_type):
-    if match_type == "혼성 복식":
-        males = [p['name'] for p in players if p['gender'] == "남"]
-        females = [p['name'] for p in players if p['gender'] == "여"]
-        total_matches = []
+    history = []
+    match_counter = defaultdict(int)
+    recent_participants = []
+    matches = []
 
-        for _ in range(game_per_player):
-            random.shuffle(males)
-            random.shuffle(females)
-            round_teams = list(zip(males, females))
-            round_matches = list(combinations(round_teams, 2))
-            total_matches.extend(round_matches)
+    def can_play(player):
+        return recent_participants.count(player) < 2
 
-        return total_matches
+    def update_recent(participants):
+        recent_participants.extend(participants)
+        if len(recent_participants) > 6:
+            del recent_participants[:len(recent_participants)-6]
+
+    names = [p['name'] for p in players]
 
     if match_type == "단식":
-        names = [p['name'] for p in players]
-    elif match_type == "복식":
-        all_players = [p['name'] for p in players]
-        random.shuffle(all_players)
-        names = [(all_players[i], all_players[i+1]) for i in range(0, len(all_players) - 1, 2)]
-    else:
-        names = []
-
-    if mode == "리그전":
-        random.shuffle(names)
+        while len(matches) < len(names) * game_per_player // 2:
+            random.shuffle(names)
+            for i in range(0, len(names) - 1):
+                p1, p2 = names[i], names[i+1]
+                if not can_play(p1) or not can_play(p2):
+                    continue
+                matches.append((p1, p2))
+                update_recent([p1, p2])
+                match_counter[p1] += 1
+                match_counter[p2] += 1
+                if all(match_counter[n] >= game_per_player for n in names):
+                    break
+    elif match_type == "복식" or match_type == "혼성 복식":
         all_pairs = list(combinations(names, 2))
-        match_count = len(names) * game_per_player // 2
-        return all_pairs[:match_count]
-
-    matches = [(names[i], names[i+1]) for i in range(0, len(names) - 1, 2)]
+        random.shuffle(all_pairs)
+        team_matches = list(combinations(all_pairs, 2))
+        random.shuffle(team_matches)
+        while len(matches) < len(names) * game_per_player // 4:
+            for t1, t2 in team_matches:
+                if set(t1) & set(t2):
+                    continue
+                participants = list(t1 + t2)
+                if any(not can_play(p) for p in participants):
+                    continue
+                matches.append((t1, t2))
+                update_recent(participants)
+                for p in participants:
+                    match_counter[p] += 1
+                if all(match_counter[n] >= game_per_player for n in names):
+                    break
     return matches
 
 # --- 대진표 생성 ---
