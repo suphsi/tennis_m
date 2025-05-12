@@ -175,7 +175,7 @@ if st.session_state.round_matches and not viewer_mode:
 
 # --- 결과 요약 및 실시간 순위 ---
 if viewer_mode:
-    st.markdown("## 👁️ 실시간 경기 결과 보기 모드")
+    st.markdown("## 🕶️ 실시간 경기 결과 보기 모드")
 if st.session_state.score_record:
     with st.expander("📊 결과 요약 및 종합 MVP", expanded=True):
         stats = []
