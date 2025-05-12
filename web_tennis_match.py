@@ -1,3 +1,4 @@
+# ✅ 반응형 테니스 토너먼트 전체 코드
 import streamlit as st
 import random
 import pandas as pd
@@ -6,6 +7,10 @@ from collections import defaultdict
 from itertools import combinations
 
 st.set_page_config(page_title="🎾 테니스 토너먼트", layout="centered")
+
+# 쿼리 파라미터 기반 접속자 전용 모드 설정
+params = st.experimental_get_query_params()
+viewer_mode = params.get("mode", [""])[0] == "viewer"
 st.title("🎾 테니스 리그/토너먼트 매치 시스템")
 
 # --- 초기 세션값 설정 ---
@@ -17,30 +22,31 @@ for k in keys:
 st.session_state.setdefault("new_players", [])
 
 # --- 참가자 입력 ---
-with st.expander("1. 참가자 등록", expanded=True):
-    with st.form("add_player", clear_on_submit=True):
-        name = st.text_input("이름 입력")
-        gender = st.radio("성별", ["남", "여"], horizontal=True)
-        submitted = st.form_submit_button("추가")
-        if submitted and name:
-            st.session_state.new_players.append({"name": name.strip(), "gender": gender})
+if not viewer_mode:
+    with st.expander("1. 참가자 등록", expanded=True):
+        with st.form("add_player", clear_on_submit=True):
+            name = st.text_input("이름 입력")
+            gender = st.radio("성별", ["남", "여"], horizontal=True)
+            submitted = st.form_submit_button("추가")
+            if submitted and name:
+                st.session_state.new_players.append({"name": name.strip(), "gender": gender})
 
-    if st.session_state.new_players:
-        st.subheader("✅ 현재 참가자 목록")
-        for i, p in enumerate(st.session_state.new_players):
-            col1, col2 = st.columns([5, 1])
-            col1.markdown(f"- {p['name']} ({p['gender']})")
-            if col2.button("❌", key=f"del_{i}"):
-                st.session_state.new_players.pop(i)
+        if st.session_state.new_players:
+            st.subheader("✅ 현재 참가자 목록")
+            for i, p in enumerate(st.session_state.new_players):
+                col1, col2 = st.columns([5, 1])
+                col1.markdown(f"- {p['name']} ({p['gender']})")
+                if col2.button("❌", key=f"del_{i}"):
+                    st.session_state.new_players.pop(i)
+                    st.rerun()
+
+            if st.button("🚫 참가자 전체 초기화"):
+                st.session_state.new_players.clear()
+                st.session_state.players.clear()
+                st.session_state.round_matches.clear()
+                st.session_state.score_record.clear()
+                st.session_state.game_history.clear()
                 st.rerun()
-
-        if st.button("🚫 참가자 전체 초기화"):
-            st.session_state.new_players.clear()
-            st.session_state.players.clear()
-            st.session_state.round_matches.clear()
-            st.session_state.score_record.clear()
-            st.session_state.game_history.clear()
-            st.rerun()
 
 # --- 설정 ---
 with st.expander("2. 경기 설정", expanded=True):
@@ -98,9 +104,12 @@ def generate_matches(players, match_type):
     return matches
 
 # --- 대진표 생성 ---
-if st.button("🎯 대진표 생성"):
-    if len(st.session_state.new_players) < 2:
-        st.warning("2명 이상 필요합니다.")
+if viewer_mode:
+    st.info("🧑‍💻 관리자용 기능은 숨김 처리되었습니다. 이 화면은 보기 전용입니다.")
+else:
+    if st.button("🎯 대진표 생성"):
+        if len(st.session_state.new_players) < 2:
+            st.warning("2명 이상 필요합니다.")
     else:
         st.session_state.players = st.session_state.new_players.copy()
         base_time = datetime.datetime.combine(datetime.date.today(), start_time)
@@ -124,6 +133,8 @@ if st.button("🎯 대진표 생성"):
         st.rerun()
 
 # --- 대진표 + 점수 입력 ---
+if viewer_mode:
+    st.markdown("## 👁️ 실시간 경기 결과 보기 모드")
 if st.session_state.round_matches:
     with st.expander("3. 대진표 및 점수 입력", expanded=True):
         for idx, match in enumerate(st.session_state.round_matches):
