@@ -49,8 +49,9 @@ if not viewer_mode:
                 st.rerun()
 
 # --- 설정 ---
-with st.expander("2. 경기 설정", expanded=True):
-    match_type = st.radio("경기 유형", ["단식", "복식", "혼성 복식"], horizontal=True)
+if not viewer_mode:
+    with st.expander("2. 경기 설정", expanded=True):
+        match_type = st.radio("경기 유형", ["단식", "복식", "혼성 복식"], horizontal=True)
     mode = st.radio("진행 방식", ["리그전", "토너먼트"], horizontal=True)
     game_per_player = st.number_input("1인당 경기 수 (리그전 전용)", min_value=1, max_value=10, value=2)
     num_courts = st.number_input("코트 수", min_value=1, value=2)
@@ -104,9 +105,7 @@ def generate_matches(players, match_type):
     return matches
 
 # --- 대진표 생성 ---
-if viewer_mode:
-    st.info("🧑‍💻 관리자용 기능은 숨김 처리되었습니다. 이 화면은 보기 전용입니다.")
-else:
+if not viewer_mode:
     if st.button("🎯 대진표 생성"):
         if len(st.session_state.new_players) < 2:
             st.warning("2명 이상 필요합니다.")
@@ -133,9 +132,7 @@ else:
         st.rerun()
 
 # --- 대진표 + 점수 입력 ---
-if viewer_mode:
-    st.markdown("## 👁️ 실시간 경기 결과 보기 모드")
-if st.session_state.round_matches:
+if st.session_state.round_matches and not viewer_mode:
     with st.expander("3. 대진표 및 점수 입력", expanded=True):
         for idx, match in enumerate(st.session_state.round_matches):
             team1 = match['team1']
@@ -177,6 +174,8 @@ if st.session_state.round_matches:
             st.success("✅ 점수가 반영되었습니다.")
 
 # --- 결과 요약 및 실시간 순위 ---
+if viewer_mode:
+    st.markdown("## 👁️ 실시간 경기 결과 보기 모드")
 if st.session_state.score_record:
     with st.expander("📊 결과 요약 및 종합 MVP", expanded=True):
         stats = []
