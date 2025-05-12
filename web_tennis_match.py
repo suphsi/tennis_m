@@ -9,7 +9,7 @@ from itertools import combinations
 st.set_page_config(page_title="🎾 테니스 토너먼트", layout="centered")
 
 # 쿼리 파라미터 기반 접속자 전용 모드 설정
-params = st.experimental_get_query_params()
+params = st.query_params
 viewer_mode = params.get("mode", [""])[0] == "viewer"
 st.title("🎾 테니스 리그/토너먼트 매치 시스템")
 
