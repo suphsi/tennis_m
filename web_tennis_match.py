@@ -1,4 +1,3 @@
-# ✅ 반응형 테니스 토너먼트 전체 코드
 import streamlit as st
 import random
 import pandas as pd
@@ -6,58 +5,54 @@ import datetime
 from collections import defaultdict
 from itertools import combinations
 
-st.set_page_config(page_title="🎾 테니스 토너먼트", layout="centered")
-
-# 쿼리 파라미터 기반 접속자 전용 모드 설정
-params = st.experimental_get_query_params()
-viewer_mode = params.get("mode", [""])[0] == "viewer"
+st.set_page_config(page_title="🎾 테니스 대진표 생성", layout="centered")
 st.title("🎾 테니스 리그/토너먼트 매치 시스템")
 
 # --- 초기 세션값 설정 ---
-def initialize_state():
-    keys = ["players", "matches", "mode", "match_type", "round_matches", "current_round", "final_scores", "game_history", "start_time", "score_record"]
-    for k in keys:
-        if k not in st.session_state:
-            st.session_state[k] = [] if k in ["players", "matches", "round_matches", "game_history"] else {}
-    st.session_state.setdefault("new_players", [])
+keys = ["players", "matches", "mode", "match_type", "round_matches", "current_round", "final_scores", "game_history", "start_time", "score_record"]
+for k in keys:
+    if k not in st.session_state:
+        st.session_state[k] = [] if k in ["players", "matches", "round_matches", "game_history"] else {}
 
-initialize_state()
+st.session_state.setdefault("new_players", [])
+
+# --- 사용자 뷰어 모드 검색 ---
+params = st.query_params
+viewer_mode = params.get("mode", [""])[0] == "viewer"
 
 # --- 참가자 입력 ---
-if not viewer_mode:
-    with st.expander("1. 참가자 등록", expanded=True):
-        with st.form("add_player", clear_on_submit=True):
-            name = st.text_input("이름 입력")
-            gender = st.radio("성별", ["남", "여"], horizontal=True)
-            submitted = st.form_submit_button("추가")
-            if submitted and name:
-                st.session_state.new_players.append({"name": name.strip(), "gender": gender})
+with st.expander("1. 참가자 등록", expanded=True):
+    with st.form("add_player", clear_on_submit=True):
+        name = st.text_input("이름 입력")
+        gender = st.radio("성별", ["남", "여"], horizontal=True)
+        submitted = st.form_submit_button("추가")
+        if submitted and name:
+            st.session_state.new_players.append({"name": name.strip(), "gender": gender})
 
-        if st.session_state.new_players:
-            st.subheader("✅ 현재 참가자 목록")
-            for i, p in enumerate(st.session_state.new_players):
-                col1, col2 = st.columns([5, 1])
-                col1.markdown(f"- {p['name']} ({p['gender']})")
-                if col2.button("❌", key=f"del_{i}"):
-                    st.session_state.new_players.pop(i)
-                    st.rerun()
-
-            if st.button("🚫 참가자 전체 초기화"):
-                st.session_state.new_players.clear()
-                st.session_state.players.clear()
-                st.session_state.round_matches.clear()
-                st.session_state.score_record.clear()
-                st.session_state.game_history.clear()
+    if st.session_state.new_players:
+        st.subheader("✅ 현재 참가자 목록")
+        for i, p in enumerate(st.session_state.new_players):
+            col1, col2 = st.columns([5, 1])
+            col1.markdown(f"- {p['name']} ({p['gender']})")
+            if col2.button("❌", key=f"del_{i}"):
+                st.session_state.new_players.pop(i)
                 st.rerun()
 
+        if st.button("🚫 참가자 전체 초기화"):
+            st.session_state.new_players.clear()
+            st.session_state.players.clear()
+            st.session_state.round_matches.clear()
+            st.session_state.score_record.clear()
+            st.session_state.game_history.clear()
+            st.rerun()
+
 # --- 설정 ---
-if not viewer_mode and st.session_state.new_players:
-    with st.expander("2. 경기 설정", expanded=True):
-        match_type = st.radio("경기 유형", ["단식", "복식", "혼성 복식"], horizontal=True)
+with st.expander("2. 게임 설정", expanded=True):
+    match_type = st.radio("게임 유형", ["단식", "복식", "혼성 복식"], horizontal=True)
     mode = st.radio("진행 방식", ["리그전", "토너먼트"], horizontal=True)
-    game_per_player = st.number_input("1인당 경기 수 (리그전 전용)", min_value=1, max_value=10, value=2)
+    game_per_player = st.number_input("1인당 게임 수 (리그전 전용)", min_value=1, max_value=10, value=2)
     num_courts = st.number_input("코트 수", min_value=1, value=2)
-    start_time = st.time_input("경기 시작 시간", value=datetime.time(9, 0))
+    start_time = st.time_input("게임 시작 시간", value=datetime.time(9, 0))
 
 # --- 매치 생성 함수 ---
 def generate_matches(players, match_type):
