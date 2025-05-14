@@ -14,12 +14,14 @@ viewer_mode = params.get("mode", [""])[0] == "viewer"
 st.title("🎾 테니스 리그/토너먼트 매치 시스템")
 
 # --- 초기 세션값 설정 ---
-keys = ["players", "matches", "mode", "match_type", "round_matches", "current_round", "final_scores", "game_history", "start_time", "score_record"]
-for k in keys:
-    if k not in st.session_state:
-        st.session_state[k] = [] if k in ["players", "matches", "round_matches", "game_history"] else {}
+def initialize_state():
+    keys = ["players", "matches", "mode", "match_type", "round_matches", "current_round", "final_scores", "game_history", "start_time", "score_record"]
+    for k in keys:
+        if k not in st.session_state:
+            st.session_state[k] = [] if k in ["players", "matches", "round_matches", "game_history"] else {}
+    st.session_state.setdefault("new_players", [])
 
-st.session_state.setdefault("new_players", [])
+initialize_state()
 
 # --- 참가자 입력 ---
 if not viewer_mode:
@@ -49,7 +51,7 @@ if not viewer_mode:
                 st.rerun()
 
 # --- 설정 ---
-if not viewer_mode:
+if not viewer_mode and st.session_state.new_players:
     with st.expander("2. 경기 설정", expanded=True):
         match_type = st.radio("경기 유형", ["단식", "복식", "혼성 복식"], horizontal=True)
     mode = st.radio("진행 방식", ["리그전", "토너먼트"], horizontal=True)
@@ -105,7 +107,7 @@ def generate_matches(players, match_type):
     return matches
 
 # --- 대진표 생성 ---
-if not viewer_mode:
+if not viewer_mode and st.session_state.new_players:
     if st.button("🎯 대진표 생성"):
         if len(st.session_state.new_players) < 2:
             st.warning("2명 이상 필요합니다.")
@@ -132,7 +134,7 @@ if not viewer_mode:
         st.rerun()
 
 # --- 대진표 + 점수 입력 ---
-if st.session_state.round_matches and not viewer_mode:
+if st.session_state.round_matches and not viewer_mode and len(st.session_state.round_matches) > 0:
     with st.expander("3. 대진표 및 점수 입력", expanded=True):
         for idx, match in enumerate(st.session_state.round_matches):
             team1 = match['team1']
