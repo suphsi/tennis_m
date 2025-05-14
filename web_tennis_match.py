@@ -9,7 +9,7 @@ from itertools import combinations
 st.set_page_config(page_title="🎾 테니스 토너먼트", layout="centered")
 
 # 쿼리 파라미터 기반 접속자 전용 모드 설정
-params = st.query_params
+params = st.experimental_get_query_params()
 viewer_mode = params.get("mode", [""])[0] == "viewer"
 st.title("🎾 테니스 리그/토너먼트 매치 시스템")
 
@@ -175,7 +175,10 @@ if st.session_state.round_matches and not viewer_mode:
 
 # --- 결과 요약 및 실시간 순위 ---
 if viewer_mode:
-    st.markdown("## 🕶️ 실시간 경기 결과 보기 모드")
+    if not st.session_state.score_record:
+        st.info("아직 경기 결과가 등록되지 않았습니다.")
+    else:
+        st.markdown("## 🕶️ 실시간 경기 결과 보기 모드")
 if st.session_state.score_record:
     with st.expander("📊 결과 요약 및 종합 MVP", expanded=True):
         stats = []
@@ -184,12 +187,12 @@ if st.session_state.score_record:
             rate = f"{r['승']/total*100:.1f}%" if total else "0%"
             stats.append((name, r['승'], r['패'], r['득점'], r['실점'], rate))
 
-        df = pd.DataFrame(stats, columns=["이름", "승", "패", "득점", "실점", "승률"])
+        df = pd.DataFrame(stats, columns=["이름", "승", "패", "득점", "실점", "승률"]).head(10)  # 상위 10명만 표시
         df = df.sort_values(by=["승", "득점"], ascending=[False, False])
         df.index += 1
         st.dataframe(df, use_container_width=True)
 
-        st.bar_chart(df.set_index("이름")["승"])
+        st.bar_chart(df.set_index("이름")["승"], use_container_width=True)
 
         st.markdown("### 🏅 실시간 MVP 순위")
         for i, row in df.head(3).iterrows():
