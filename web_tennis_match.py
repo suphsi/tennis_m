@@ -176,11 +176,22 @@ if st.session_state.round_matches and not viewer_mode and len(st.session_state.r
             st.success("✅ 점수가 반영되었습니다.")
 
 # --- 결과 요약 및 실시간 순위 ---
+@st.cache_data
+def get_summary(score_record):
+    stats = []
+    for name, r in score_record.items():
+        total = r['승'] + r['패']
+        rate = f"{r['승']/total*100:.1f}%" if total else "0%"
+        stats.append((name, r['승'], r['패'], r['득점'], r['실점'], rate))
+    df = get_summary(st.session_state.score_record)
+    df.index += 1
+    return df.head(5)  # 상위 5명만 표시
+
 if viewer_mode:
     if not st.session_state.score_record:
         st.info("아직 경기 결과가 등록되지 않았습니다.")
     else:
-        st.markdown("## 🕶️ 실시간 경기 결과 보기 모드")
+        st.markdown("## 👁️ 실시간 경기 결과 보기 모드")
 if st.session_state.score_record:
     with st.expander("📊 결과 요약 및 종합 MVP", expanded=True):
         stats = []
@@ -194,7 +205,7 @@ if st.session_state.score_record:
         df.index += 1
         st.dataframe(df, use_container_width=True)
 
-        st.bar_chart(df.set_index("이름")["승"], use_container_width=True)
+        # st.bar_chart(df.set_index("이름")["승"], use_container_width=True)  # 성능 최적화를 위해 제거
 
         st.markdown("### 🏅 실시간 MVP 순위")
         for i, row in df.head(3).iterrows():
