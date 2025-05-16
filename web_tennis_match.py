@@ -5,8 +5,8 @@ import datetime
 from collections import defaultdict
 from itertools import combinations
 
-st.set_page_config(page_title="🎾 테니스 대진표", layout="centered")
-st.title("🎾 테니스 매치 시스템")
+st.set_page_config(page_title="🎾 테니스 토너먼트", layout="centered")
+st.title("🎾 테니스 리그/토너먼트 매치 시스템")
 
 # --- 초기 세션값 설정 ---
 keys = ["players", "matches", "mode", "match_type", "round_matches", "current_round", "final_scores", "game_history", "start_time", "score_record"]
@@ -34,7 +34,11 @@ with st.expander("1. 참가자 등록", expanded=True):
         names = [f"- {p['name']} ({p['gender']})" for p in st.session_state.new_players]
         st.markdown("\n".join(names))
 
-        if st.button("🚫 참가자 전체 초기화"):
+        col1, col2 = st.columns(2)
+        if col1.button("⏪ 직전 참가자 취소"):
+            st.session_state.new_players.pop()
+            st.rerun()
+        if col2.button("🚫 참가자 전체 초기화"):
             st.session_state.new_players.clear()
             st.session_state.players.clear()
             st.session_state.round_matches.clear()
