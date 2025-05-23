@@ -29,14 +29,14 @@ with st.expander("1. 참가자 등록", expanded=True):
     # 아래는 form 바깥!
     if st.session_state.new_players:
         st.subheader("✅ 현재 참가자 목록")
-        # 참가자별 삭제 버튼
         for idx, p in enumerate(st.session_state.new_players):
             cols = st.columns([8, 1])
             cols[0].markdown(f"- {p['name']} ({p['gender']})")
             if cols[1].button("❌", key=f"del_{idx}"):
                 st.session_state.new_players.pop(idx)
                 st.rerun()
-        # 직전 취소/전체 초기화는 목록 아래, form 바깥에!
+        # 참가자 수 표시
+        st.markdown(f"**현재 참가자 수: {len(st.session_state.new_players)}명**")
         col1, col2 = st.columns(2)
         if col1.button("⏪ 직전 참가자 취소"):
             if st.session_state.new_players:
