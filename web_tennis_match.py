@@ -83,22 +83,25 @@ if st.button("🎯 대진표 생성"):
         court_cycle = [i+1 for i in range(num_courts)]
         raw_matches = cached_generate_matches(
             st.session_state.players, match_type, game_per_player, mode)
-        st.session_state.round_matches = []
-        for i, match in enumerate(raw_matches):
-            court = court_cycle[i % num_courts]
-            match_time = base_time + datetime.timedelta(minutes=30*i)
-            st.session_state.round_matches.append({
-                "team1": match[0],
-                "team2": match[1],
-                "court": court,
-                "time": match_time.strftime('%H:%M'),
-                "score1": "",
-                "score2": ""
-            })
-        st.session_state.score_record = defaultdict(lambda: {"승":0, "패":0, "득점":0, "실점":0})
-        st.session_state.game_history.clear()
-        st.success("✅ 대진표가 생성되었습니다.")
-        st.rerun()
+        if not raw_matches:
+            st.error("대진표를 생성할 수 없습니다.")
+        else:
+            st.session_state.round_matches = []
+            for i, match in enumerate(raw_matches):
+                court = court_cycle[i % num_courts]
+                match_time = base_time + datetime.timedelta(minutes=30*i)
+                st.session_state.round_matches.append({
+                    "team1": match[0],
+                    "team2": match[1],
+                    "court": court,
+                    "time": match_time.strftime('%H:%M'),
+                    "score1": "",
+                    "score2": ""
+                })
+            st.session_state.score_record = defaultdict(lambda: {"승":0, "패":0, "득점":0, "실점":0})
+            st.session_state.game_history.clear()
+            st.success("✅ 대진표가 생성되었습니다.")
+            st.rerun()
 
 # --- 대진표 및 점수 입력 ---
 if st.session_state.round_matches:
