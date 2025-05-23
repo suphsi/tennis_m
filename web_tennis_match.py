@@ -2,7 +2,7 @@ import streamlit as st
 import random
 import pandas as pd
 import datetime
-from collections import defaultdict, deque
+from collections import defaultdict
 from itertools import combinations
 
 st.set_page_config(page_title="🎾 테니스 토너먼트", layout="centered")
@@ -58,92 +58,78 @@ with st.expander("2. 경기 설정", expanded=True):
     num_courts = st.number_input("코트 수", min_value=1, value=2)
     start_time = st.time_input("경기 시작 시간", value=datetime.time(9, 0))
 
-# --- 페어 생성 함수 (복식, 혼성복식 홀수 대응) ---
-def make_doubles_pairs(names):
-    random.shuffle(names)
-    pairs = []
-    used = set()
-    i = 0
-    while i < len(names) - 1:
-        pairs.append((names[i], names[i+1]))
-        used.add(names[i])
-        used.add(names[i+1])
-        i += 2
-    if i < len(names):
-        partner_candidates = list(used) if used else names[:i]
-        partner = random.choice(partner_candidates)
-        pairs.append((names[i], partner))
-    return pairs
-
-def make_mixed_pairs(males, females):
-    random.shuffle(males)
-    random.shuffle(females)
-    pairs = []
-    used_m = set()
-    used_f = set()
-    min_len = min(len(males), len(females))
-    for i in range(min_len):
-        pairs.append((males[i], females[i]))
-        used_m.add(males[i])
-        used_f.add(females[i])
-    if len(males) > len(females):
-        for i in range(len(females), len(males)):
-            partner = random.choice(list(used_f) if used_f else females)
-            pairs.append((males[i], partner))
-    elif len(females) > len(males):
-        for i in range(len(males), len(females)):
-            partner = random.choice(list(used_m) if used_m else males)
-            pairs.append((partner, females[i]))
-    return pairs
-
-# --- 연속 출전 금지 매치 스케줄러 ---
-def schedule_matches_with_no_consecutive(matches, all_players, team_size, max_repeat=2):
-    """
-    matches: 전체 가능한 매치 리스트 (튜플의 튜플)
-    all_players: 참가자 이름 리스트
-    team_size: 단식-1, 복식/혼복-2
-    max_repeat: 최대 연속 경기 수-1 (2로 하면 3연속 금지)
-    """
-    final_schedule = []
-    last_played = {name: deque(maxlen=max_repeat) for name in all_players}
-    assigned_matches = set()
+# --- 복식, 혼성복식 고유 파트너 매치 생성 ---
+def generate_unique_doubles_matches(names, game_per_player):
+    all_possible_pairs = set()
+    n = len(names)
+    for i in range(n):
+        for j in range(i+1, n):
+            all_possible_pairs.add(tuple(sorted([names[i], names[j]])))
+    used_teams = set()
+    all_matches = []
     attempts = 0
-    MAX_ATTEMPTS = 5000
-    matches = matches.copy()
-    random.shuffle(matches)
-    while matches and attempts < MAX_ATTEMPTS:
-        for i, match in enumerate(matches):
-            # 현재 경기 참가자
-            flat_players = []
-            if team_size == 1:  # 단식
-                flat_players = list(match)
-            else:  # 복식/혼복
-                flat_players = list(match[0]) + list(match[1])
-            # 최근 max_repeat 경기에서 나왔던 사람 있는지 체크
-            is_repeat = False
-            for p in flat_players:
-                if len(last_played[p]) == max_repeat and all(last_played[p][j] == 1 for j in range(max_repeat)):
-                    is_repeat = True
-                    break
-            if not is_repeat and match not in assigned_matches:
-                final_schedule.append(match)
-                for p in flat_players:
-                    # 경기 참여하면 기록: 1, 안나오면 0
-                    last_played[p].append(1)
-                # 나머지 참가자 기록 갱신
-                for p in all_players:
-                    if p not in flat_players:
-                        last_played[p].append(0)
-                assigned_matches.add(match)
-                matches.pop(i)
-                break
-        else:
-            # 남은 매치들 모두 반복되는 경우라 더 배정 불가
-            break
+    max_attempts = 2000
+    while len(all_matches) < (n * game_per_player) // 2 and attempts < max_attempts:
+        teams = []
+        available = list(all_possible_pairs - used_teams)
+        random.shuffle(available)
+        used_in_round = set()
+        i = 0
+        while i < len(available):
+            team = available[i]
+            if any(p in used_in_round for p in team):
+                i += 1
+                continue
+            teams.append(team)
+            used_in_round.update(team)
+            used_teams.add(team)
+            i += 1
+        # 한 라운드 팀으로 매치 생성 (팀끼리 멤버 중복 없는 매치)
+        for i in range(0, len(teams) - 1, 2):
+            t1, t2 = teams[i], teams[i+1]
+            if set(t1).isdisjoint(set(t2)):
+                all_matches.append((t1, t2))
         attempts += 1
-    return final_schedule
+        if len(available) < 4:  # 더 이상 팀 조합이 불가
+            break
+    return all_matches
 
-# --- 매치 생성 함수 (최적화, 캐시 적용, 연속출전금지) ---
+def generate_unique_mixed_doubles_matches(males, females, game_per_player):
+    all_possible_pairs = set()
+    for m in males:
+        for f in females:
+            all_possible_pairs.add((m, f))
+    used_teams = set()
+    all_matches = []
+    total_players = len(males) + len(females)
+    attempts = 0
+    max_attempts = 2000
+    while len(all_matches) < (total_players * game_per_player) // 2 and attempts < max_attempts:
+        teams = []
+        available = list(all_possible_pairs - used_teams)
+        random.shuffle(available)
+        used_in_round = set()
+        i = 0
+        while i < len(available):
+            team = available[i]
+            if any(p in used_in_round for p in team):
+                i += 1
+                continue
+            teams.append(team)
+            used_in_round.update(team)
+            used_teams.add(team)
+            i += 1
+        # 매치 생성 (팀 멤버 중복 없이)
+        for i in range(0, len(teams) - 1, 2):
+            t1, t2 = teams[i], teams[i+1]
+            if set(t1).isdisjoint(set(t2)):
+                all_matches.append((t1, t2))
+        attempts += 1
+        if len(available) < 4:
+            break
+    return all_matches
+
+# --- 단식은 기존 방식 ---
 @st.cache_data
 def cached_generate_matches(players, match_type, game_per_player, mode):
     names = [p['name'] for p in players]
@@ -154,34 +140,15 @@ def cached_generate_matches(players, match_type, game_per_player, mode):
         all_pairs = list(combinations(names, 2))
         random.shuffle(all_pairs)
         match_count = len(names) * game_per_player // 2
-        base_matches = all_pairs[:match_count*3]  # 여유 있게 후보 생성
-        scheduled = schedule_matches_with_no_consecutive(base_matches, names, 1, max_repeat=2)
-        matches = scheduled[:match_count]
+        matches = all_pairs[:match_count]
 
     elif match_type == "복식":
-        # 여러 번 페어 생성해서 후보 확보
-        base_matches = []
-        for _ in range(20):  # 반복 횟수 조절
-            pairs = make_doubles_pairs(names)
-            match_combis = list(combinations(pairs, 2))
-            base_matches.extend(match_combis)
-        # 최대 가능한 매치 수 산정
-        match_count = max(1, (len(names) * game_per_player) // 2)
-        scheduled = schedule_matches_with_no_consecutive(base_matches, names, 2, max_repeat=2)
-        matches = scheduled[:match_count]
+        matches = generate_unique_doubles_matches(names, game_per_player)
 
     elif match_type == "혼성 복식":
         males = [p['name'] for p in players if p['gender'] == "남"]
         females = [p['name'] for p in players if p['gender'] == "여"]
-        all_names = males + females
-        base_matches = []
-        for _ in range(20):  # 반복 횟수 조절
-            pairs = make_mixed_pairs(males, females)
-            match_combis = list(combinations(pairs, 2))
-            base_matches.extend(match_combis)
-        match_count = max(1, (len(all_names) * game_per_player) // 2)
-        scheduled = schedule_matches_with_no_consecutive(base_matches, all_names, 2, max_repeat=2)
-        matches = scheduled[:match_count]
+        matches = generate_unique_mixed_doubles_matches(males, females, game_per_player)
 
     return matches
 
