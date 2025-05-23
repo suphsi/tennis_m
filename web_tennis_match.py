@@ -18,6 +18,7 @@ st.session_state.setdefault("new_players", [])
 
 # --- 참가자 입력 ---
 with st.expander("1. 참가자 등록", expanded=True):
+    # 참가자 추가만 form
     with st.form("add_player", clear_on_submit=True):
         name = st.text_input("이름 입력")
         gender = st.radio("성별", ["남", "여"], horizontal=True)
@@ -25,14 +26,17 @@ with st.expander("1. 참가자 등록", expanded=True):
         if submitted and name:
             st.session_state.new_players.append({"name": name.strip(), "gender": gender})
 
+    # 아래는 form 바깥!
     if st.session_state.new_players:
         st.subheader("✅ 현재 참가자 목록")
+        # 참가자별 삭제 버튼
         for idx, p in enumerate(st.session_state.new_players):
             cols = st.columns([8, 1])
             cols[0].markdown(f"- {p['name']} ({p['gender']})")
             if cols[1].button("❌", key=f"del_{idx}"):
                 st.session_state.new_players.pop(idx)
                 st.rerun()
+        # 직전 취소/전체 초기화는 목록 아래, form 바깥에!
         col1, col2 = st.columns(2)
         if col1.button("⏪ 직전 참가자 취소"):
             if st.session_state.new_players:
