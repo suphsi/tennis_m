@@ -37,12 +37,7 @@ with st.expander("1. 참가자 등록", expanded=True):
             if cols[1].button("❌", key=f"del_{idx}"):
                 st.session_state.new_players.pop(idx)
                 st.rerun()
-        col1, col2 = st.columns(2)
-        if col1.button("⏪ 직전 참가자 취소"):
-            if st.session_state.new_players:
-                st.session_state.new_players.pop()
-                st.rerun()
-        if col2.button("🚫 참가자 전체 초기화"):
+        if st.button("🚫 참가자 전체 초기화"):
             st.session_state.new_players.clear()
             st.session_state.players.clear()
             st.session_state.round_matches.clear()
