@@ -9,7 +9,10 @@ st.set_page_config(page_title="🎾 테니스 토너먼트", layout="centered")
 st.title("🎾 테니스 리그/토너먼트 매치 시스템")
 
 # --- 초기 세션값 설정 ---
-keys = ["players", "matches", "mode", "match_type", "round_matches", "current_round", "final_scores", "game_history", "start_time", "score_record"]
+keys = [
+    "players", "matches", "mode", "match_type", "round_matches", "current_round",
+    "final_scores", "game_history", "start_time", "score_record"
+]
 for k in keys:
     if k not in st.session_state:
         st.session_state[k] = [] if k in ["players", "matches", "round_matches", "game_history"] else {}
@@ -18,7 +21,6 @@ st.session_state.setdefault("new_players", [])
 
 # --- 참가자 입력 ---
 with st.expander("1. 참가자 등록", expanded=True):
-    # 참가자 추가만 form
     with st.form("add_player", clear_on_submit=True):
         name = st.text_input("이름 입력")
         gender = st.radio("성별", ["남", "여"], horizontal=True)
@@ -26,7 +28,6 @@ with st.expander("1. 참가자 등록", expanded=True):
         if submitted and name:
             st.session_state.new_players.append({"name": name.strip(), "gender": gender})
 
-    # 아래는 form 바깥!
     if st.session_state.new_players:
         st.subheader("✅ 현재 참가자 목록")
         for idx, p in enumerate(st.session_state.new_players):
@@ -35,7 +36,6 @@ with st.expander("1. 참가자 등록", expanded=True):
             if cols[1].button("❌", key=f"del_{idx}"):
                 st.session_state.new_players.pop(idx)
                 st.rerun()
-        # 참가자 수 표시
         st.markdown(f"**현재 참가자 수: {len(st.session_state.new_players)}명**")
         col1, col2 = st.columns(2)
         if col1.button("⏪ 직전 참가자 취소"):
@@ -58,19 +58,17 @@ with st.expander("2. 경기 설정", expanded=True):
     num_courts = st.number_input("코트 수", min_value=1, value=2)
     start_time = st.time_input("경기 시작 시간", value=datetime.time(9, 0))
 
-# --- 매치 생성 함수 (캐싱 적용) ---
+# --- 매치 생성 함수 (단식 예시, 복식/혼복은 네가 기존에 쓰던 코드 넣으면 됨) ---
 @st.cache_data
 def cached_generate_matches(players, match_type, game_per_player, mode):
-    # 예시: 단식만 구현, 복식/혼복은 너의 기존 generate_matches 로직 넣어주면 됨
     names = [p['name'] for p in players]
     random.shuffle(names)
     if match_type == "단식":
-        # 모든 참가자 페어 조합을 생성하고, 필요한 만큼만 반환
         all_pairs = list(combinations(names, 2))
         random.shuffle(all_pairs)
         match_count = len(names) * game_per_player // 2
         return all_pairs[:match_count]
-    # 복식, 혼성 복식 등 구현 추가...
+    # 복식, 혼성 복식 등 구현 필요
     return []
 
 # --- 대진표 생성 ---
@@ -80,7 +78,7 @@ if st.button("🎯 대진표 생성"):
     else:
         st.session_state.players = st.session_state.new_players.copy()
         base_time = datetime.datetime.combine(datetime.date.today(), start_time)
-        court_cycle = [i+1 for i in range(num_courts)]
+        court_cycle = [i + 1 for i in range(num_courts)]
         raw_matches = cached_generate_matches(
             st.session_state.players, match_type, game_per_player, mode)
         if not raw_matches:
@@ -89,7 +87,7 @@ if st.button("🎯 대진표 생성"):
             st.session_state.round_matches = []
             for i, match in enumerate(raw_matches):
                 court = court_cycle[i % num_courts]
-                match_time = base_time + datetime.timedelta(minutes=30*i)
+                match_time = base_time + datetime.timedelta(minutes=30 * i)
                 st.session_state.round_matches.append({
                     "team1": match[0],
                     "team2": match[1],
@@ -98,7 +96,7 @@ if st.button("🎯 대진표 생성"):
                     "score1": "",
                     "score2": ""
                 })
-            st.session_state.score_record = defaultdict(lambda: {"승":0, "패":0, "득점":0, "실점":0})
+            st.session_state.score_record = defaultdict(lambda: {"승": 0, "패": 0, "득점": 0, "실점": 0})
             st.session_state.game_history.clear()
             st.success("✅ 대진표가 생성되었습니다.")
             st.rerun()
