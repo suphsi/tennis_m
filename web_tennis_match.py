@@ -58,18 +58,78 @@ with st.expander("2. 경기 설정", expanded=True):
     num_courts = st.number_input("코트 수", min_value=1, value=2)
     start_time = st.time_input("경기 시작 시간", value=datetime.time(9, 0))
 
-# --- 매치 생성 함수 (단식 예시, 복식/혼복은 네가 기존에 쓰던 코드 넣으면 됨) ---
+# --- 페어 생성 함수 (복식, 혼성복식 홀수 대응) ---
+def make_doubles_pairs(names):
+    random.shuffle(names)
+    pairs = []
+    used = set()
+    i = 0
+    while i < len(names) - 1:
+        pairs.append((names[i], names[i+1]))
+        used.add(names[i])
+        used.add(names[i+1])
+        i += 2
+    if i < len(names):
+        # 짝이 없는 마지막 한 명을 이미 경기한 사람 중에서 랜덤하게 재배정
+        partner_candidates = list(used)
+        partner = random.choice(partner_candidates)
+        pairs.append((names[i], partner))
+    return pairs
+
+def make_mixed_pairs(males, females):
+    random.shuffle(males)
+    random.shuffle(females)
+    pairs = []
+    used_m = set()
+    used_f = set()
+    min_len = min(len(males), len(females))
+    for i in range(min_len):
+        pairs.append((males[i], females[i]))
+        used_m.add(males[i])
+        used_f.add(females[i])
+    # 남는 남자/여자 있으면 이미 쓴 상대와 페어링
+    # 남자가 더 많을 때
+    if len(males) > len(females):
+        for i in range(len(females), len(males)):
+            partner = random.choice(list(used_f))
+            pairs.append((males[i], partner))
+    # 여자가 더 많을 때
+    elif len(females) > len(males):
+        for i in range(len(males), len(females)):
+            partner = random.choice(list(used_m))
+            pairs.append((partner, females[i]))
+    return pairs
+
+# --- 매치 생성 함수 (최적화, 캐시 적용) ---
 @st.cache_data
 def cached_generate_matches(players, match_type, game_per_player, mode):
     names = [p['name'] for p in players]
     random.shuffle(names)
+    matches = []
+
     if match_type == "단식":
         all_pairs = list(combinations(names, 2))
         random.shuffle(all_pairs)
         match_count = len(names) * game_per_player // 2
-        return all_pairs[:match_count]
-    # 복식, 혼성 복식 등 구현 필요
-    return []
+        matches = all_pairs[:match_count]
+
+    elif match_type == "복식":
+        pairs = make_doubles_pairs(names)
+        all_matches = list(combinations(pairs, 2))
+        random.shuffle(all_matches)
+        match_count = len(pairs) * game_per_player // 2
+        matches = all_matches[:match_count]
+
+    elif match_type == "혼성 복식":
+        males = [p['name'] for p in players if p['gender'] == "남"]
+        females = [p['name'] for p in players if p['gender'] == "여"]
+        pairs = make_mixed_pairs(males, females)
+        all_matches = list(combinations(pairs, 2))
+        random.shuffle(all_matches)
+        match_count = len(pairs) * game_per_player // 2
+        matches = all_matches[:match_count]
+
+    return matches
 
 # --- 대진표 생성 ---
 if st.button("🎯 대진표 생성"):
@@ -107,8 +167,16 @@ if st.session_state.round_matches:
         for idx, match in enumerate(st.session_state.round_matches):
             team1 = match['team1']
             team2 = match['team2']
-            t1 = team1 if isinstance(team1, str) else " + ".join(team1) if isinstance(team1, (list, tuple)) else str(team1)
-            t2 = team2 if isinstance(team2, str) else " + ".join(team2) if isinstance(team2, (list, tuple)) else str(team2)
+            t1 = (
+                team1 if isinstance(team1, str)
+                else " + ".join(team1) if isinstance(team1, (list, tuple))
+                else str(team1)
+            )
+            t2 = (
+                team2 if isinstance(team2, str)
+                else " + ".join(team2) if isinstance(team2, (list, tuple))
+                else str(team2)
+            )
             st.caption(f"코트 {match['court']} / 시간 {match['time']}")
             col1, col2, col3, col4, col5 = st.columns([3, 1, 1, 1, 3])
             col1.markdown(f"**{t1}**")
