@@ -19,7 +19,56 @@ for k in keys:
 
 st.session_state.setdefault("new_players", [])
 
-# --- 참가자 입력 ---
+# --- 뷰어 모드 토글 ---
+viewer_mode = st.sidebar.checkbox("👁️‍🗨️ 경기 결과/랭킹만 보기 (뷰어모드)", value=False)
+
+# --- 뷰어 모드일 때: 경기결과 + MVP만 노출 ---
+if viewer_mode:
+    st.header("📊 경기 결과 및 MVP")
+    if st.session_state.round_matches:
+        with st.expander("3. 대진표 및 점수 현황", expanded=True):
+            for idx, match in enumerate(st.session_state.round_matches):
+                team1 = match['team1']
+                team2 = match['team2']
+                t1 = (
+                    team1 if isinstance(team1, str)
+                    else " + ".join(team1) if isinstance(team1, (list, tuple))
+                    else str(team1)
+                )
+                t2 = (
+                    team2 if isinstance(team2, str)
+                    else " + ".join(team2) if isinstance(team2, (list, tuple))
+                    else str(team2)
+                )
+                st.caption(f"코트 {match['court']} / 시간 {match['time']}")
+                col1, col2, col3, col4, col5 = st.columns([3, 1, 1, 1, 3])
+                col1.markdown(f"**{t1}**")
+                col3.markdown("vs")
+                col5.markdown(f"**{t2}**")
+                s1 = match['score1'] if match['score1'] else "-"
+                s2 = match['score2'] if match['score2'] else "-"
+                col2.markdown(f"**{s1}**")
+                col4.markdown(f"**{s2}**")
+    if st.session_state.score_record:
+        with st.expander("📊 결과 요약 및 종합 MVP", expanded=True):
+            stats = []
+            for name, r in st.session_state.score_record.items():
+                total = r['승'] + r['패']
+                rate = f"{r['승']/total*100:.1f}%" if total else "0%"
+                stats.append((name, r['승'], r['패'], r['득점'], r['실점'], rate))
+
+            df = pd.DataFrame(stats, columns=["이름", "승", "패", "득점", "실점", "승률"])
+            df = df.sort_values(by=["승", "득점"], ascending=[False, False])
+            df.index += 1
+            st.dataframe(df, use_container_width=True)
+            st.bar_chart(df.set_index("이름")["승"])
+            st.markdown("### 🏅 MVP Top 3")
+            for i, row in df.head(3).iterrows():
+                medal = ["🥇", "🥈", "🥉"][i-1] if i <= 3 else ""
+                st.markdown(f"**{medal} {row['이름']}** - 승 {row['승']}, 승률 {row['승률']}")
+    st.stop()  # 관리자 모드 코드 아래는 실행하지 않음
+
+# --- 관리자 기능 (기존 코드와 동일) ---
 with st.expander("1. 참가자 등록", expanded=True):
     with st.form("add_player", clear_on_submit=True):
         name = st.text_input("이름 입력")
@@ -50,7 +99,6 @@ with st.expander("1. 참가자 등록", expanded=True):
             st.session_state.game_history.clear()
             st.rerun()
 
-# --- 경기 설정 ---
 with st.expander("2. 경기 설정", expanded=True):
     match_type = st.radio("경기 유형", ["단식", "복식", "혼성 복식"], horizontal=True)
     mode = st.radio("진행 방식", ["리그전", "토너먼트"], horizontal=True)
@@ -129,7 +177,6 @@ def generate_unique_mixed_doubles_matches(males, females, game_per_player):
             break
     return all_matches
 
-# --- 단식은 기존 방식 ---
 @st.cache_data
 def cached_generate_matches(players, match_type, game_per_player, mode):
     names = [p['name'] for p in players]
@@ -152,7 +199,6 @@ def cached_generate_matches(players, match_type, game_per_player, mode):
 
     return matches
 
-# --- 대진표 생성 ---
 if st.button("🎯 대진표 생성"):
     if len(st.session_state.new_players) < 2:
         st.warning("2명 이상 필요합니다.")
@@ -182,7 +228,6 @@ if st.button("🎯 대진표 생성"):
             st.success("✅ 대진표가 생성되었습니다.")
             st.rerun()
 
-# --- 대진표 및 점수 입력 ---
 if st.session_state.round_matches:
     with st.expander("3. 대진표 및 점수 입력", expanded=True):
         for idx, match in enumerate(st.session_state.round_matches):
@@ -232,7 +277,6 @@ if st.session_state.round_matches:
                         st.session_state.score_record[p]['패'] += 1
             st.success("✅ 점수가 반영되었습니다.")
 
-# --- 결과 요약 ---
 if st.session_state.score_record:
     with st.expander("📊 결과 요약 및 종합 MVP", expanded=True):
         stats = []
@@ -246,7 +290,6 @@ if st.session_state.score_record:
         df.index += 1
         st.dataframe(df, use_container_width=True)
         st.bar_chart(df.set_index("이름")["승"])
-
         st.markdown("### 🏅 MVP Top 3")
         for i, row in df.head(3).iterrows():
             medal = ["🥇", "🥈", "🥉"][i-1] if i <= 3 else ""
