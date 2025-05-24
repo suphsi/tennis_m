@@ -9,7 +9,7 @@ st.set_page_config(page_title="🎾 테니스 토너먼트", layout="centered")
 st.title("🎾 테니스 리그/토너먼트 매치 시스템")
 
 # --- 쿼리 파라미터 기반 뷰어 모드 감지 ---
-params = st.experimental_get_query_params()
+params = st.query_params()
 viewer_mode = params.get('mode', [None])[0] == 'viewer'
 
 # --- 초기 세션값 설정 ---
