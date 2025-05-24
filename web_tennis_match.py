@@ -8,6 +8,10 @@ from itertools import combinations
 st.set_page_config(page_title="🎾 테니스 토너먼트", layout="centered")
 st.title("🎾 테니스 리그/토너먼트 매치 시스템")
 
+# --- 쿼리 파라미터 기반 뷰어 모드 감지 ---
+params = st.experimental_get_query_params()
+viewer_mode = params.get('mode', [None])[0] == 'viewer'
+
 # --- 초기 세션값 설정 ---
 keys = [
     "players", "matches", "mode", "match_type", "round_matches", "current_round",
@@ -19,12 +23,9 @@ for k in keys:
 
 st.session_state.setdefault("new_players", [])
 
-# --- 뷰어 모드 토글 ---
-viewer_mode = st.sidebar.checkbox("👁️‍🗨️ 경기 결과/랭킹만 보기 (뷰어모드)", value=False)
-
 # --- 뷰어 모드일 때: 경기결과 + MVP만 노출 ---
 if viewer_mode:
-    st.header("📊 경기 결과 및 MVP")
+    st.header("📊 경기 결과 및 MVP (VIEWER MODE)")
     if st.session_state.round_matches:
         with st.expander("3. 대진표 및 점수 현황", expanded=True):
             for idx, match in enumerate(st.session_state.round_matches):
@@ -68,7 +69,7 @@ if viewer_mode:
                 st.markdown(f"**{medal} {row['이름']}** - 승 {row['승']}, 승률 {row['승률']}")
     st.stop()  # 관리자 모드 코드 아래는 실행하지 않음
 
-# --- 관리자 기능 (기존 코드와 동일) ---
+# --- 관리자 기능 (코드 a 원형) ---
 with st.expander("1. 참가자 등록", expanded=True):
     with st.form("add_player", clear_on_submit=True):
         name = st.text_input("이름 입력")
