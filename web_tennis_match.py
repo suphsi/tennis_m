@@ -6,18 +6,113 @@ from collections import defaultdict
 from itertools import combinations
 
 st.set_page_config(page_title="🎾 테니스 토너먼트", layout="centered")
-st.title("🎾 테니스 리그/토너먼트 매치 시스템")
+
+params = st.query_params  # 최신 쿼리파라미터 방식
 
 # --- 초기 세션값 설정 ---
-keys = [
-    "players", "matches", "mode", "match_type", "round_matches", "current_round",
-    "final_scores", "game_history", "start_time", "score_record"
-]
+keys = ["players", "matches", "mode", "match_type", "round_matches", "current_round", "final_scores", "game_history", "start_time", "score_record"]
 for k in keys:
     if k not in st.session_state:
         st.session_state[k] = [] if k in ["players", "matches", "round_matches", "game_history"] else {}
 
 st.session_state.setdefault("new_players", [])
+
+# --- 복식/혼성복식 팀 조합 조건 함수 ---
+def generate_doubles_matches(players, game_per_player, is_mixed=False):
+    matches = []
+    partner_counts = defaultdict(lambda: defaultdict(int))
+    all_players = [p['name'] for p in players]
+
+    if is_mixed:
+        males = [p['name'] for p in players if p['gender'] == '남']
+        females = [p['name'] for p in players if p['gender'] == '여']
+        min_pairs = min(len(males), len(females))
+        for round_no in range(game_per_player):
+            random.shuffle(males)
+            random.shuffle(females)
+            round_teams = []
+            used_males, used_females = set(), set()
+            for m, f in zip(males, females):
+                # 파트너 2회 이상 금지
+                if partner_counts[m][f] >= 2 or partner_counts[f][m] >= 2:
+                    continue
+                round_teams.append((m, f))
+                partner_counts[m][f] += 1
+                partner_counts[f][m] += 1
+                used_males.add(m)
+                used_females.add(f)
+            round_pool = round_teams[:]
+            random.shuffle(round_pool)
+            for i in range(0, len(round_pool) - 1, 2):
+                t1 = round_pool[i]
+                t2 = round_pool[i+1]
+                # 한 경기 내 팀 중복 멤버 방지
+                if set(t1) & set(t2):
+                    continue
+                matches.append((t1, t2))
+    else:
+        # 복식
+        for round_no in range(game_per_player):
+            available = all_players[:]
+            random.shuffle(available)
+            round_teams = []
+            while len(available) >= 2:
+                a = available.pop()
+                b = available.pop()
+                if partner_counts[a][b] >= 2 or partner_counts[b][a] >= 2:
+                    continue
+                round_teams.append((a, b))
+                partner_counts[a][b] += 1
+                partner_counts[b][a] += 1
+            random.shuffle(round_teams)
+            for i in range(0, len(round_teams) - 1, 2):
+                t1 = round_teams[i]
+                t2 = round_teams[i+1]
+                if set(t1) & set(t2):
+                    continue
+                matches.append((t1, t2))
+    return matches
+
+def generate_matches(players, match_type, game_per_player):
+    if match_type == "혼성 복식":
+        return generate_doubles_matches(players, game_per_player, is_mixed=True)
+    elif match_type == "복식":
+        return generate_doubles_matches(players, game_per_player, is_mixed=False)
+    elif match_type == "단식":
+        names = [p['name'] for p in players]
+        random.shuffle(names)
+        matches = []
+        for i in range(0, len(names) - 1, 2):
+            matches.append(((names[i],), (names[i+1],)))
+        return matches
+    return []
+
+# --- 뷰어 모드 (mode=viewer) ---
+if "mode" in params and params["mode"][0] == "viewer":
+    st.title("🎾 경기 결과 뷰어")
+    if st.session_state.score_record:
+        with st.expander("📊 결과 요약 및 종합 MVP", expanded=True):
+            stats = []
+            for name, r in st.session_state.score_record.items():
+                total = r['승'] + r['패']
+                rate = f"{r['승']/total*100:.1f}%" if total else "0%"
+                stats.append((name, r['승'], r['패'], r['득점'], r['실점'], rate))
+
+            df = pd.DataFrame(stats, columns=["이름", "승", "패", "득점", "실점", "승률"])
+            df = df.sort_values(by=["승", "득점"], ascending=[False, False])
+            df.index += 1
+            st.dataframe(df, use_container_width=True)
+            st.bar_chart(df.set_index("이름")["승"])
+            st.markdown("### 🏅 MVP Top 3")
+            for i, row in df.head(3).iterrows():
+                medal = ["🥇", "🥈", "🥉"][i-1] if i <= 3 else ""
+                st.markdown(f"**{medal} {row['이름']}** - 승 {row['승']}, 승률 {row['승률']}")
+    else:
+        st.info("아직 기록된 경기 결과가 없습니다.")
+    st.stop()
+
+# --- 일반 모드 (관리자/운영자용) ---
+st.title("🎾 테니스 리그/토너먼트 매치 시스템")
 
 # --- 참가자 입력 ---
 with st.expander("1. 참가자 등록", expanded=True):
@@ -30,19 +125,15 @@ with st.expander("1. 참가자 등록", expanded=True):
 
     if st.session_state.new_players:
         st.subheader("✅ 현재 참가자 목록")
-        for idx, p in enumerate(st.session_state.new_players):
-            cols = st.columns([8, 1])
-            cols[0].markdown(f"- {p['name']} ({p['gender']})")
-            if cols[1].button("❌", key=f"del_{idx}"):
-                st.session_state.new_players.pop(idx)
+        for i, p in enumerate(st.session_state.new_players):
+            col1, col2 = st.columns([5, 1])
+            col1.markdown(f"- {p['name']} ({p['gender']})")
+            if col2.button("❌", key=f"del_{i}"):
+                st.session_state.new_players.pop(i)
                 st.rerun()
-        st.markdown(f"**현재 참가자 수: {len(st.session_state.new_players)}명**")
-        col1, col2 = st.columns(2)
-        if col1.button("⏪ 직전 참가자 취소"):
-            if st.session_state.new_players:
-                st.session_state.new_players.pop()
-                st.rerun()
-        if col2.button("🚫 참가자 전체 초기화"):
+        st.caption(f"참가자 수: {len(st.session_state.new_players)}")
+
+        if st.button("🚫 참가자 전체 초기화"):
             st.session_state.new_players.clear()
             st.session_state.players.clear()
             st.session_state.round_matches.clear()
@@ -50,107 +141,13 @@ with st.expander("1. 참가자 등록", expanded=True):
             st.session_state.game_history.clear()
             st.rerun()
 
-# --- 경기 설정 ---
+# --- 설정 ---
 with st.expander("2. 경기 설정", expanded=True):
     match_type = st.radio("경기 유형", ["단식", "복식", "혼성 복식"], horizontal=True)
     mode = st.radio("진행 방식", ["리그전", "토너먼트"], horizontal=True)
     game_per_player = st.number_input("1인당 경기 수 (리그전 전용)", min_value=1, max_value=10, value=2)
     num_courts = st.number_input("코트 수", min_value=1, value=2)
     start_time = st.time_input("경기 시작 시간", value=datetime.time(9, 0))
-
-# --- 복식, 혼성복식 고유 파트너 매치 생성 ---
-def generate_unique_doubles_matches(names, game_per_player):
-    all_possible_pairs = set()
-    n = len(names)
-    for i in range(n):
-        for j in range(i+1, n):
-            all_possible_pairs.add(tuple(sorted([names[i], names[j]])))
-    used_teams = set()
-    all_matches = []
-    attempts = 0
-    max_attempts = 2000
-    while len(all_matches) < (n * game_per_player) // 2 and attempts < max_attempts:
-        teams = []
-        available = list(all_possible_pairs - used_teams)
-        random.shuffle(available)
-        used_in_round = set()
-        i = 0
-        while i < len(available):
-            team = available[i]
-            if any(p in used_in_round for p in team):
-                i += 1
-                continue
-            teams.append(team)
-            used_in_round.update(team)
-            used_teams.add(team)
-            i += 1
-        # 한 라운드 팀으로 매치 생성 (팀끼리 멤버 중복 없는 매치)
-        for i in range(0, len(teams) - 1, 2):
-            t1, t2 = teams[i], teams[i+1]
-            if set(t1).isdisjoint(set(t2)):
-                all_matches.append((t1, t2))
-        attempts += 1
-        if len(available) < 4:  # 더 이상 팀 조합이 불가
-            break
-    return all_matches
-
-def generate_unique_mixed_doubles_matches(males, females, game_per_player):
-    all_possible_pairs = set()
-    for m in males:
-        for f in females:
-            all_possible_pairs.add((m, f))
-    used_teams = set()
-    all_matches = []
-    total_players = len(males) + len(females)
-    attempts = 0
-    max_attempts = 2000
-    while len(all_matches) < (total_players * game_per_player) // 2 and attempts < max_attempts:
-        teams = []
-        available = list(all_possible_pairs - used_teams)
-        random.shuffle(available)
-        used_in_round = set()
-        i = 0
-        while i < len(available):
-            team = available[i]
-            if any(p in used_in_round for p in team):
-                i += 1
-                continue
-            teams.append(team)
-            used_in_round.update(team)
-            used_teams.add(team)
-            i += 1
-        # 매치 생성 (팀 멤버 중복 없이)
-        for i in range(0, len(teams) - 1, 2):
-            t1, t2 = teams[i], teams[i+1]
-            if set(t1).isdisjoint(set(t2)):
-                all_matches.append((t1, t2))
-        attempts += 1
-        if len(available) < 4:
-            break
-    return all_matches
-
-# --- 단식은 기존 방식 ---
-@st.cache_data
-def cached_generate_matches(players, match_type, game_per_player, mode):
-    names = [p['name'] for p in players]
-    random.shuffle(names)
-    matches = []
-
-    if match_type == "단식":
-        all_pairs = list(combinations(names, 2))
-        random.shuffle(all_pairs)
-        match_count = len(names) * game_per_player // 2
-        matches = all_pairs[:match_count]
-
-    elif match_type == "복식":
-        matches = generate_unique_doubles_matches(names, game_per_player)
-
-    elif match_type == "혼성 복식":
-        males = [p['name'] for p in players if p['gender'] == "남"]
-        females = [p['name'] for p in players if p['gender'] == "여"]
-        matches = generate_unique_mixed_doubles_matches(males, females, game_per_player)
-
-    return matches
 
 # --- 대진표 생성 ---
 if st.button("🎯 대진표 생성"):
@@ -159,45 +156,33 @@ if st.button("🎯 대진표 생성"):
     else:
         st.session_state.players = st.session_state.new_players.copy()
         base_time = datetime.datetime.combine(datetime.date.today(), start_time)
-        court_cycle = [i + 1 for i in range(num_courts)]
-        raw_matches = cached_generate_matches(
-            st.session_state.players, match_type, game_per_player, mode)
-        if not raw_matches:
-            st.error("대진표를 생성할 수 없습니다.")
-        else:
-            st.session_state.round_matches = []
-            for i, match in enumerate(raw_matches):
-                court = court_cycle[i % num_courts]
-                match_time = base_time + datetime.timedelta(minutes=30 * i)
-                st.session_state.round_matches.append({
-                    "team1": match[0],
-                    "team2": match[1],
-                    "court": court,
-                    "time": match_time.strftime('%H:%M'),
-                    "score1": "",
-                    "score2": ""
-                })
-            st.session_state.score_record = defaultdict(lambda: {"승": 0, "패": 0, "득점": 0, "실점": 0})
-            st.session_state.game_history.clear()
-            st.success("✅ 대진표가 생성되었습니다.")
-            st.rerun()
+        court_cycle = [i+1 for i in range(num_courts)]
+        raw_matches = generate_matches(st.session_state.players, match_type, game_per_player)
+        st.session_state.round_matches = []
+        for i, match in enumerate(raw_matches):
+            court = court_cycle[i % num_courts]
+            match_time = base_time + datetime.timedelta(minutes=30*i)
+            st.session_state.round_matches.append({
+                "team1": match[0],
+                "team2": match[1],
+                "court": court,
+                "time": match_time.strftime('%H:%M'),
+                "score1": "",
+                "score2": ""
+            })
+        st.session_state.score_record = defaultdict(lambda: {"승":0, "패":0, "득점":0, "실점":0})
+        st.session_state.game_history.clear()
+        st.success("✅ 대진표가 생성되었습니다.")
+        st.rerun()
 
-# --- 대진표 및 점수 입력 ---
+# --- 대진표 + 점수 입력 ---
 if st.session_state.round_matches:
     with st.expander("3. 대진표 및 점수 입력", expanded=True):
         for idx, match in enumerate(st.session_state.round_matches):
             team1 = match['team1']
             team2 = match['team2']
-            t1 = (
-                team1 if isinstance(team1, str)
-                else " + ".join(team1) if isinstance(team1, (list, tuple))
-                else str(team1)
-            )
-            t2 = (
-                team2 if isinstance(team2, str)
-                else " + ".join(team2) if isinstance(team2, (list, tuple))
-                else str(team2)
-            )
+            t1 = team1 if isinstance(team1, str) else " + ".join(team1)
+            t2 = team2 if isinstance(team2, str) else " + ".join(team2)
             st.caption(f"코트 {match['court']} / 시간 {match['time']}")
             col1, col2, col3, col4, col5 = st.columns([3, 1, 1, 1, 3])
             col1.markdown(f"**{t1}**")
@@ -246,7 +231,6 @@ if st.session_state.score_record:
         df.index += 1
         st.dataframe(df, use_container_width=True)
         st.bar_chart(df.set_index("이름")["승"])
-
         st.markdown("### 🏅 MVP Top 3")
         for i, row in df.head(3).iterrows():
             medal = ["🥇", "🥈", "🥉"][i-1] if i <= 3 else ""
