@@ -8,6 +8,9 @@ st.set_page_config(page_title="🎾 테니스 토너먼트", layout="centered")
 
 params = st.query_params  # 최신 쿼리파라미터 방식
 
+# --- 일반 모드 (관리자/운영자용) ---
+st.title("🎾 테니스 리그/토너먼트 매치 시스템")
+
 # --- 초기 세션값 설정 ---
 keys = ["players", "matches", "mode", "match_type", "round_matches", "current_round", "final_scores", "game_history", "start_time", "score_record"]
 for k in keys:
@@ -166,8 +169,6 @@ if "mode" in params and params["mode"][0] == "viewer":
         st.info("아직 기록된 경기 결과가 없습니다.")
     st.stop()
 
-# --- 일반 모드 (관리자/운영자용) ---
-st.title("🎾 테니스 리그/토너먼트 매치 시스템")
 
 # --- 대진표 생성 ---
 if st.button("🎯 대진표 생성"):
