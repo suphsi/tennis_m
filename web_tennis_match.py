@@ -5,10 +5,6 @@ import datetime
 from collections import defaultdict
 
 st.set_page_config(page_title="🎾 테니스 토너먼트", layout="centered")
-
-params = st.query_params  # 최신 쿼리파라미터 방식
-
-# --- 일반 모드 (관리자/운영자용) ---
 st.title("🎾 테니스 리그/토너먼트 매치 시스템")
 
 # --- 초기 세션값 설정 ---
@@ -27,16 +23,12 @@ with st.expander("1. 참가자 등록", expanded=True):
         career = st.selectbox("구력(년수)", list(range(1, 11)), format_func=lambda x: f"{x}년")
         submitted = st.form_submit_button("추가")
         if submitted and name:
-            st.session_state.new_players.append({
-                "name": name.strip(),
-                "gender": gender,
-                "career": career
-            })
+            st.session_state.new_players.append({"name": name.strip(), "gender": gender, "career": career})
 
     if st.session_state.new_players:
         st.subheader("✅ 현재 참가자 목록")
         for i, p in enumerate(st.session_state.new_players):
-            col1, col2 = st.columns([8, 1])
+            col1, col2 = st.columns([7, 1])
             col1.markdown(f"- {p['name']} ({p['gender']}, {p['career']}년)")
             if col2.button("❌", key=f"del_{i}"):
                 st.session_state.new_players.pop(i)
@@ -59,116 +51,72 @@ with st.expander("2. 경기 설정", expanded=True):
     num_courts = st.number_input("코트 수", min_value=1, value=2)
     start_time = st.time_input("경기 시작 시간", value=datetime.time(9, 0))
 
-# --- 구력 기반 매칭 로직 ---
-def generate_career_matches(players, match_type, game_per_player):
-    # 참가자 모두 career 필드 포함됨!
-    players = sorted(players, key=lambda p: p['career'])
-    matches = []
-    used = set()
+# --- 구력 기반 매칭 함수 ---
+def get_closest_pairs(player_list):
+    """구력 순으로 가장 가까운 사람끼리 쌍을 이룸."""
+    players = sorted(player_list, key=lambda p: p['career'])
+    pairs = []
+    while len(players) >= 2:
+        p1 = players.pop(0)
+        # 남은 사람 중 career 차이가 가장 적은 사람 찾기
+        min_gap = float('inf')
+        min_idx = -1
+        for i, p2 in enumerate(players):
+            gap = abs(p1['career'] - p2['career'])
+            if gap < min_gap:
+                min_gap = gap
+                min_idx = i
+        p2 = players.pop(min_idx)
+        pairs.append((p1, p2))
+    return pairs
 
-    if match_type == "단식":
-        tmp_players = players.copy()
-        while len(tmp_players) > 1:
-            # 항상 career 차이 가장 적은 두 명 매칭
-            min_gap = 100
-            pair = None
-            for i in range(len(tmp_players)):
-                for j in range(i+1, len(tmp_players)):
-                    gap = abs(tmp_players[i]['career'] - tmp_players[j]['career'])
-                    if gap < min_gap:
-                        min_gap = gap
-                        pair = (i, j)
-            if pair:
-                i, j = pair
-                p1, p2 = tmp_players[i], tmp_players[j]
-                matches.append(((p1['name'],), (p2['name'],)))
-                for idx in sorted([i, j], reverse=True):
-                    tmp_players.pop(idx)
-            else:
-                break
+def generate_matches(players, match_type):
+    if match_type == "혼성 복식":
+        males = [p for p in players if p['gender'] == "남"]
+        females = [p for p in players if p['gender'] == "여"]
+        team_pairs = []
+        # 남+여 페어(구력 가장 가까운 조합)
+        while males and females:
+            m = males.pop(0)
+            # 여 중에서 career 가장 비슷한 사람 찾기
+            min_gap = float('inf')
+            min_idx = -1
+            for i, f in enumerate(females):
+                gap = abs(m['career'] - f['career'])
+                if gap < min_gap:
+                    min_gap = gap
+                    min_idx = i
+            f = females.pop(min_idx)
+            team_pairs.append(((m['name'], f['name']), (m['career']+f['career'])/2))
+        # 팀들끼리 평균 career로 정렬 후 가장 비슷한 팀끼리 매칭
+        team_pairs.sort(key=lambda t: t[1])
+        matches = []
+        teams_only = [tp[0] for tp in team_pairs]
+        for i in range(0, len(teams_only) - 1, 2):
+            matches.append((teams_only[i], teams_only[i+1]))
         return matches
 
-    elif match_type == "복식":
-        # 복식팀 만들 때 career 비슷한 두 명 끼리
-        tmp_players = players.copy()
-        teams = []
-        while len(tmp_players) > 1:
-            min_gap = 100
-            pair = None
-            for i in range(len(tmp_players)):
-                for j in range(i+1, len(tmp_players)):
-                    gap = abs(tmp_players[i]['career'] - tmp_players[j]['career'])
-                    if gap < min_gap:
-                        min_gap = gap
-                        pair = (i, j)
-            if pair:
-                i, j = pair
-                a, b = tmp_players[i], tmp_players[j]
-                teams.append((a['name'], b['name']))
-                for idx in sorted([i, j], reverse=True):
-                    tmp_players.pop(idx)
-            else:
-                break
-        # 이제 팀 대진표: career의 평균값으로 정렬 후 가까운 팀끼리 매칭
-        teams = sorted(teams, key=lambda t: sum([p['career'] for p in players if p['name'] in t])/2)
-        match_list = []
-        for i in range(0, len(teams)-1, 2):
-            match_list.append((teams[i], teams[i+1]))
-        return match_list
+    if match_type == "복식":
+        # 전체 참가자 구력 기반 페어(최소 career 차)
+        pairs = get_closest_pairs(players)
+        # 각 팀 평균 구력 기준으로 팀 정렬 후 가장 가까운 팀끼리 매칭
+        team_pairs = [((p1['name'], p2['name']), (p1['career'] + p2['career'])/2) for p1, p2 in pairs]
+        team_pairs.sort(key=lambda t: t[1])
+        teams_only = [tp[0] for tp in team_pairs]
+        matches = []
+        for i in range(0, len(teams_only) - 1, 2):
+            matches.append((teams_only[i], teams_only[i+1]))
+        return matches
 
-    elif match_type == "혼성 복식":
-        males = sorted([p for p in players if p['gender'] == '남'], key=lambda p: p['career'])
-        females = sorted([p for p in players if p['gender'] == '여'], key=lambda p: p['career'])
-        min_len = min(len(males), len(females))
-        teams = []
-        # 남+여 중에서 구력 가장 비슷한 페어로 팀
-        for _ in range(min_len):
-            min_gap = 100
-            pair = None
-            for i in range(len(males)):
-                for j in range(len(females)):
-                    gap = abs(males[i]['career'] - females[j]['career'])
-                    if gap < min_gap:
-                        min_gap = gap
-                        pair = (i, j)
-            if pair:
-                i, j = pair
-                m, f = males[i], females[j]
-                teams.append((m['name'], f['name']))
-                for idx, group in [(i, males), (j, females)]:
-                    group.pop(idx)
-        # 팀 평균 구력 기준 대진표
-        teams = sorted(teams, key=lambda t: sum([p['career'] for p in players if p['name'] in t])/2)
-        match_list = []
-        for i in range(0, len(teams)-1, 2):
-            match_list.append((teams[i], teams[i+1]))
-        return match_list
+    if match_type == "단식":
+        # 구력 기반 매칭
+        pairs = get_closest_pairs(players)
+        matches = []
+        for p1, p2 in pairs:
+            matches.append(((p1['name'],), (p2['name'],)))
+        return matches
+
     return []
-
-# --- 뷰어 모드 (mode=viewer) ---
-if "mode" in params and params["mode"][0] == "viewer":
-    st.title("🎾 경기 결과 뷰어")
-    if st.session_state.score_record:
-        with st.expander("📊 결과 요약 및 종합 MVP", expanded=True):
-            stats = []
-            for name, r in st.session_state.score_record.items():
-                total = r['승'] + r['패']
-                rate = f"{r['승']/total*100:.1f}%" if total else "0%"
-                stats.append((name, r['승'], r['패'], r['득점'], r['실점'], rate))
-
-            df = pd.DataFrame(stats, columns=["이름", "승", "패", "득점", "실점", "승률"])
-            df = df.sort_values(by=["승", "득점"], ascending=[False, False])
-            df.index += 1
-            st.dataframe(df, use_container_width=True)
-            st.bar_chart(df.set_index("이름")["승"])
-            st.markdown("### 🏅 MVP Top 3")
-            for i, row in df.head(3).iterrows():
-                medal = ["🥇", "🥈", "🥉"][i-1] if i <= 3 else ""
-                st.markdown(f"**{medal} {row['이름']}** - 승 {row['승']}, 승률 {row['승률']}")
-    else:
-        st.info("아직 기록된 경기 결과가 없습니다.")
-    st.stop()
-
 
 # --- 대진표 생성 ---
 if st.button("🎯 대진표 생성"):
@@ -178,7 +126,7 @@ if st.button("🎯 대진표 생성"):
         st.session_state.players = st.session_state.new_players.copy()
         base_time = datetime.datetime.combine(datetime.date.today(), start_time)
         court_cycle = [i+1 for i in range(num_courts)]
-        raw_matches = generate_career_matches(st.session_state.players, match_type, game_per_player)
+        raw_matches = generate_matches(st.session_state.players, match_type)
         st.session_state.round_matches = []
         for i, match in enumerate(raw_matches):
             court = court_cycle[i % num_courts]
