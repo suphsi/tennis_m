@@ -4,8 +4,8 @@ import pandas as pd
 import datetime
 from collections import defaultdict
 
-st.set_page_config(page_title="🎾 테니스 토너먼트", layout="centered")
-st.title("🎾 테니스 리그/토너먼트 매치 시스템")
+st.set_page_config(page_title="🎾 테니스 매치 시스템", layout="centered")
+st.title("🎾 테니스 매치 시스템")
 
 main_mode = st.radio("경기 분류", ["일반 경기", "A팀 vs B팀"], horizontal=True)
 
