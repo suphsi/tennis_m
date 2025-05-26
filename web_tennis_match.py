@@ -3,12 +3,10 @@ import random
 import pandas as pd
 import datetime
 from collections import defaultdict
-from itertools import combinations
 
 st.set_page_config(page_title="🎾 테니스 토너먼트", layout="centered")
 st.title("🎾 테니스 리그/토너먼트 매치 시스템")
 
-# --- 상태 초기화 ---
 def init_state(key, default):
     if key not in st.session_state:
         st.session_state[key] = default
@@ -27,10 +25,12 @@ init_state("team_score_record", defaultdict(lambda: {"승":0, "패":0, "득점":
 
 main_mode = st.radio("경기 분류", ["일반 경기", "A팀 vs B팀"], horizontal=True, key="main_mode")
 
-# ----------------- 공통 함수 -----------------
-def get_pairs_by_career(player_list, n_pairs=None, match_type="복식"):
-    """구력 기준 페어링 (복식/혼복/단식)"""
+# ---- BYE 없이 페어링 함수 ----
+def get_pairs_by_career_no_bye(player_list, match_type="복식"):
     players = sorted(player_list, key=lambda p: p['career'])
+    result = []
+    used = set()
+    n = len(players)
     if match_type == "혼성 복식":
         males = [p for p in players if p['gender'] == "남"]
         females = [p for p in players if p['gender'] == "여"]
@@ -39,29 +39,25 @@ def get_pairs_by_career(player_list, n_pairs=None, match_type="복식"):
             m = males.pop(0)
             f = min(females, key=lambda x: abs(x['career'] - m['career']))
             females.remove(f)
-            pairs.append(((m['name'], f['name']), (m['career']+f['career'])/2))
-        # 홀수면 남은 사람 BYE
-        for m in males:
-            pairs.append(((m['name'], "BYE"), m['career']))
-        for f in females:
-            pairs.append((("BYE", f['name']), f['career']))
-    else:  # 복식/단식
-        pairs = []
-        pl = players.copy()
-        while len(pl) >= 2:
-            p1 = pl.pop(0)
-            p2 = min(pl, key=lambda x: abs(x['career'] - p1['career']))
-            pl.remove(p2)
-            pairs.append(((p1['name'], p2['name']), (p1['career'] + p2['career'])/2))
-        # 홀수면 BYE
-        if pl:
-            pairs.append(((pl[0]['name'], "BYE"), pl[0]['career']))
-    # 페어 중간값으로 정렬 (비슷한 구력끼리 붙게)
-    pairs.sort(key=lambda t: t[1])
-    return [tp[0] for tp in pairs[:n_pairs]] if n_pairs else [tp[0] for tp in pairs]
+            pairs.append((m['name'], f['name']))
+        leftovers = males + females
+        while leftovers:
+            partner = random.choice([p for pair in pairs for p in pair])
+            p = leftovers.pop(0)
+            pairs.append((p['name'], partner))
+        return pairs
+    pl = players.copy()
+    while len(pl) >= 2:
+        p1 = pl.pop(0)
+        p2 = min(pl, key=lambda x: abs(x['career'] - p1['career']))
+        pl.remove(p2)
+        result.append((p1['name'], p2['name']))
+    if pl:  # 남는 한 명이 있으면 기존 페어에서 랜덤으로 한 명과 다시 짝
+        partner = random.choice([name for pair in result for name in pair])
+        result.append((pl[0]['name'], partner))
+    return result
 
 def assign_matches_evenly(team_pairs, num_matches):
-    """모든 페어가 최대한 균등하게 매치 횟수 배정"""
     matches = []
     cnt = 0
     num_pairs = len(team_pairs)
@@ -70,13 +66,13 @@ def assign_matches_evenly(team_pairs, num_matches):
         if idx1 != idx2:
             matches.append((team_pairs[idx1], team_pairs[idx2]))
         else:
-            # 불가피하게 자기자신이면 BYE
-            matches.append((team_pairs[idx1], ("BYE", "BYE")))
+            # 자기자신이면 임의로 다른 페어랑 붙이기
+            idx2 = (idx1+1) % num_pairs
+            matches.append((team_pairs[idx1], team_pairs[idx2]))
         cnt += 1
     return matches
 
 def schedule_matches(match_settings, players):
-    """경기 유형/횟수별로 균등 배정된 대진표 생성"""
     matches = []
     base_time = datetime.datetime.combine(datetime.date.today(), match_settings["start_time"])
     court_cycle = [i+1 for i in range(match_settings["num_courts"])]
@@ -92,8 +88,7 @@ def schedule_matches(match_settings, players):
             group = players
         else:
             continue
-        pairs = get_pairs_by_career(group, n_pairs=None, match_type="혼성 복식" if mtype=="혼성 복식" else "복식")
-        # 필요한 페어 수만큼만 추출(부족하면 BYE)
+        pairs = get_pairs_by_career_no_bye(group, match_type="혼성 복식" if mtype=="혼성 복식" else "복식")
         num_pairs = max(2, min(len(pairs), n_games+1))
         pairs = pairs[:num_pairs]
         mt = assign_matches_evenly(pairs, n_games)
