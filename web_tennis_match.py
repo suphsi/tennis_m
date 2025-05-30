@@ -163,7 +163,8 @@ if main_mode == "일반 경기":
     with st.expander("1. 참가자 등록", expanded=True):
         with st.form("add_normal_player", clear_on_submit=True):
             name = st.text_input("이름 입력")
-            gender = st.radio("성별", ["남", "여"], horizontal=True, key="gN")
+            gender = st.radio("성별", ["남", "여"], horizontal=True, key="gN", index=None)
+            value = st.session_state.get("gender_input", None)
             career = st.selectbox("구력(년수)", list(range(1, 11)), format_func=lambda x: f"{x}년", key="cN")
             submitted = st.form_submit_button("추가")
             if submitted and name:
