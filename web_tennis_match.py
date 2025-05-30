@@ -170,6 +170,7 @@ if main_mode == "일반 경기":
             if submitted and name:
                 st.session_state.normal_players.append({"name": name.strip(), "gender": gender, "career": career})
                 st.session_state["gender_input"] = gender  # 마지막 선택 유지
+                st.experimental_rerun()  # 즉시 적용
         if st.session_state.normal_players:
             st.subheader("✅ 현재 참가자 목록")
             for i, p in enumerate(st.session_state.normal_players):
@@ -248,6 +249,7 @@ elif main_mode == "A팀 vs B팀":
         if submitA and nameA:
             st.session_state.teamA.append({"name": nameA.strip(), "gender": genderA, "career": careerA})
             st.session_state["gender_input"] = genderA  # 마지막 선택 유지
+            st.experimental_rerun()  # 즉시 적용
 
     st.markdown(f"#### {teamB_name} 등록")
     with st.form("add_teamB", clear_on_submit=True):
@@ -258,6 +260,7 @@ elif main_mode == "A팀 vs B팀":
         if submitB and nameB:
             st.session_state.teamB.append({"name": nameB.strip(), "gender": genderB, "career": careerB})
             st.session_state["gender_input"] = genderB  # 마지막 선택 유지
+            st.experimental_rerun()  # 즉시 적용
 
     st.markdown(f"**{teamA_name}:**")
     for i, p in enumerate(st.session_state.teamA):
